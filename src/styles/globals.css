@@ -1,0 +1,78 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-primary: #D28A4C;
+  --color-primary-dark: #C47B3E;
+  --color-primary-foreground: #140D0A;
+  --color-amber: #E3A44E;
+  --color-secondary: #B39463;
+  --color-text-secondary: #CFB28C;
+  --color-background: #140D0A;
+  --color-background-elevated: #FBFBFB;
+  --color-foreground: #F5F1EB;
+  --color-white: #FFFFFF;
+  --color-black: #000000;
+  --color-card: #241612;
+  --color-surface-card: #241612;
+  --color-surface-raised: #2F1D15;
+  --color-surface-dark: #38220F;
+  --color-border: #3F2319;
+  --color-border-soft: #55321F;
+  --color-gray-light: #EDEDED;
+  --color-success: #00A66C;
+  --color-error: #ED1B2E;
+  --color-muted-foreground: #B39463;
+  --color-accent: #2F1D15;
+  --color-input: #3F2319;
+  --color-ring: #D28A4C;
+}
+
+:root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color-scheme: dark; font-synthesis: none; text-rendering: optimizeLegibility; }
+body { min-width: 320px; min-height: 100vh; margin: 0; background: var(--color-background); color: var(--color-foreground); }
+
+.price-range-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 15px;
+  margin: 0;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+
+.price-range-input:focus-visible {
+  outline: none;
+}
+
+.price-range-input::-webkit-slider-runnable-track {
+  height: 4px;
+  background: transparent;
+}
+
+.price-range-input::-moz-range-track {
+  height: 4px;
+  background: transparent;
+}
+
+.price-range-input::-webkit-slider-thumb {
+  width: 15px;
+  height: 15px;
+  margin-top: -5.5px;
+  appearance: none;
+  border: 3px solid var(--color-background);
+  border-radius: 50%;
+  background: var(--color-primary);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.price-range-input::-moz-range-thumb {
+  width: 9px;
+  height: 9px;
+  border: 3px solid var(--color-background);
+  border-radius: 50%;
+  background: var(--color-primary);
+  pointer-events: auto;
+  cursor: pointer;
+}
