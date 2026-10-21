@@ -1,5 +1,15 @@
 # Desafio Frontend — Marketplace de NFTs
 
+## Ambiente de desenvolvimento
+
+O repositório está preparado com Vite, React, TypeScript, TanStack Router e Query, Axios, Socket.IO Client, Tailwind CSS v4, MSW, shadcn/ui e Playwright. Esta etapa contém somente a rota inicial de smoke test; nenhuma funcionalidade do marketplace foi implementada.
+
+Requer Node.js `>=20.19.0` (validado com Node 22.17.1) e npm 11.5.2. Após clonar, execute `npm install` e use `npm run dev` para iniciar a aplicação.
+
+Copie `.env.example` para `.env.local` para ajustar as variáveis de infraestrutura. O MSW só inicia em desenvolvimento quando `VITE_ENABLE_MOCKS=true`; seus handlers estão vazios até a próxima etapa. Comandos disponíveis: `npm run build`, `npm run preview`, `npm run lint`, `npm run typecheck`, `npm run test:e2e` e `npm run test:e2e:ui`. O Playwright está configurado para Chromium desktop e mobile; instale o navegador com `npx playwright install chromium` quando for executar o smoke test.
+
+TanStack Query inicia com `staleTime` de 30 segundos, uma tentativa de retry para queries e sem refetch ao focar a janela. O socket é criado sob demanda, permanece desconectado até uma feature chamar `connect()` e pode ser encerrado por `disconnectSocket()`.
+
 Implemente o **NFT Marketplace** em React e TypeScript, seguindo o [layout no Figma](https://www.figma.com/design/Ff0SksUi7UFtPWUO8kyNtw/Frontend-Challenge?node-id=0-1).
 
 O desafio avalia fidelidade visual, qualidade das interações, integração com APIs, gerenciamento de estado assíncrono, tempo real, acessibilidade e performance.
