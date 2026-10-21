@@ -21,11 +21,29 @@ const networks = [
 const MIN_PRICE = 2
 const MAX_PRICE = 1230
 
-export function HomeFilters() {
-  const [selectedCollection, setSelectedCollection] = useState('Arte digital')
-  const [selectedNetwork, setSelectedNetwork] = useState<string | null>(null)
-  const [minPrice, setMinPrice] = useState(MIN_PRICE)
-  const [maxPrice, setMaxPrice] = useState(MAX_PRICE)
+type HomeFiltersProps = {
+  selectedCollection: string | null
+  onCollectionChange: (collection: string | null) => void
+  selectedNetwork: string | null
+  onNetworkChange: (network: string | null) => void
+  priceRange: [number, number]
+  onPriceRangeApply: (range: [number, number]) => void
+}
+
+export function HomeFilters({
+  selectedCollection,
+  onCollectionChange,
+  selectedNetwork,
+  onNetworkChange,
+  priceRange,
+  onPriceRangeApply,
+}: HomeFiltersProps) {
+  const [minPrice, setMinPrice] = useState(priceRange[0])
+  const [maxPrice, setMaxPrice] = useState(priceRange[1])
+
+  const applyPriceRange = () => {
+    onPriceRangeApply([minPrice, maxPrice])
+  }
 
   const formatPrice = (value: number) =>
     (value / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -47,7 +65,7 @@ export function HomeFilters() {
                 className={`flex h-10 w-full items-center justify-between px-2 font-mono text-[15px] font-normal leading-10 transition-colors ${
                   selectedCollection === label ? 'text-primary' : 'text-secondary hover:text-primary'
                 }`}
-                onClick={() => setSelectedCollection(label)}
+                onClick={() => onCollectionChange(selectedCollection === label ? null : label)}
                 type="button"
               >
                 <span>{label}</span>
@@ -96,7 +114,9 @@ export function HomeFilters() {
           </p>
 
           <button
+            aria-label={`Aplicar faixa de preço de ${formatPrice(minPrice)} a ${formatPrice(maxPrice)} ETH`}
             className="mt-2 flex h-9 w-23 items-center justify-center rounded-md bg-primary p-2 font-mono text-base font-bold leading-5 text-primary-foreground transition-colors hover:bg-primary-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface-card"
+            onClick={applyPriceRange}
             type="button"
           >
             <span className="flex h-5 w-17 items-center justify-center">Aplicar</span>
@@ -119,7 +139,7 @@ export function HomeFilters() {
                 className={`flex h-10 w-full items-center justify-between px-2 font-mono text-[15px] font-normal leading-10 transition-colors ${
                   selectedNetwork === label ? 'text-primary' : 'text-secondary hover:text-primary'
                 }`}
-                onClick={() => setSelectedNetwork(selectedNetwork === label ? null : label)}
+                onClick={() => onNetworkChange(selectedNetwork === label ? null : label)}
                 type="button"
               >
                 <span>{label}</span>

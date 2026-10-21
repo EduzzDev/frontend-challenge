@@ -7,6 +7,213 @@ test('home route renders the challenge heading', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Base shadcn/ui pronta' })).toBeVisible()
 })
 
+test('marketplace NFT opens its detail page with aligned related artwork and existing footer', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('link', { name: 'Ver detalhes de Emerald Ape #042' }).click()
+
+  await expect(page).toHaveURL(/\/nft\/emerald-ape-042$/)
+  await expect(page.getByRole('heading', { name: 'Emerald Ape #042' })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Navegação estrutural' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Mais desta coleção' })).toBeVisible()
+  await expect(page.getByRole('contentinfo')).toBeVisible()
+
+  await expect(page.getByRole('list', { name: 'Redes sociais' }).getByRole('link')).toHaveCount(5)
+
+  const mainNftImage = page.getByRole('img', { name: 'NFT Emerald Ape #042' }).first()
+  const mainImageSource = await mainNftImage.getAttribute('src')
+  const galleryOptions = page.getByRole('button', { name: /^Ver imagem \d de Emerald Ape$/ })
+  await expect(galleryOptions).toHaveCount(4)
+  for (const option of await galleryOptions.all()) {
+    await expect(option.locator('img')).toHaveAttribute('src', mainImageSource!)
+  }
+  await galleryOptions.nth(2).click()
+  await expect(galleryOptions.nth(2)).toHaveAttribute('aria-pressed', 'true')
+  await expect(mainNftImage).toHaveAttribute('src', mainImageSource!)
+
+  const editions = page.getByRole('group', { name: 'Opções de edição' })
+  await expect(editions.getByRole('button', { name: '1/50' })).toHaveAttribute('aria-pressed', 'true')
+  await editions.getByRole('button', { name: '1/10' }).click()
+  await expect(editions.getByRole('button', { name: '1/10' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(editions.getByRole('button', { name: '1/50' })).toHaveAttribute('aria-pressed', 'false')
+
+  const quantity = page.getByLabel('Quantidade', { exact: true })
+  const decreaseQuantity = page.getByRole('button', { name: 'Diminuir quantidade' })
+  const increaseQuantity = page.getByRole('button', { name: 'Aumentar quantidade' })
+  await expect(quantity).toHaveText('1')
+  await expect(decreaseQuantity).toBeDisabled()
+  for (const button of [decreaseQuantity, increaseQuantity]) {
+    await expect(button).toHaveCSS('width', '33px')
+    await expect(button).toHaveCSS('height', '49.5px')
+    await expect(button).toHaveCSS('border-top-width', '1px')
+    const borderRadius = await button.evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).borderTopLeftRadius),
+    )
+    expect(borderRadius).toBeGreaterThanOrEqual(24.75)
+  }
+  await increaseQuantity.click()
+  await expect(quantity).toHaveText('2')
+  await decreaseQuantity.click()
+  await expect(quantity).toHaveText('1')
+
+  const tokenDetails = page.locator('dl')
+  await expect(tokenDetails).toHaveCSS('font-size', '15px')
+  await expect(tokenDetails).toHaveCSS('font-weight', '400')
+  await expect(tokenDetails).toHaveCSS('line-height', '20px')
+  await expect(tokenDetails).toHaveCSS('color', 'rgb(179, 148, 99)')
+
+  const shareOptions = page.getByRole('navigation', { name: 'Compartilhar este NFT' })
+  await expect(shareOptions.getByRole('link')).toHaveCount(3)
+  await expect(shareOptions.getByRole('link', { name: 'Compartilhar no LinkedIn' })).toHaveAttribute(
+    'href',
+    /linkedin\.com\/sharing\/share-offsite\/\?url=/,
+  )
+  await expect(shareOptions.getByRole('link', { name: 'Compartilhar por e-mail' })).toHaveAttribute(
+    'href',
+    /^mailto:/,
+  )
+  await expect(shareOptions.getByRole('link', { name: 'Compartilhar no Twitter' })).toHaveAttribute(
+    'href',
+    /twitter\.com\/intent\/tweet\?url=/,
+  )
+  const shareLabel = page.getByText('Compartilhar este NFT:', { exact: true })
+  const labelBounds = await shareLabel.boundingBox()
+  const linkedinBounds = await shareOptions.getByRole('link', { name: 'Compartilhar no LinkedIn' }).boundingBox()
+  expect(labelBounds).not.toBeNull()
+  expect(linkedinBounds).not.toBeNull()
+  expect(Math.abs(labelBounds!.y + labelBounds!.height / 2 - (linkedinBounds!.y + linkedinBounds!.height / 2))).toBeLessThan(2)
+
+  const relatedImages = page.getByRole('region', { name: 'Mais desta coleção' }).getByRole('img')
+  await expect(relatedImages).toHaveCount(5)
+  for (const image of await relatedImages.all()) {
+    await expect(image).toHaveCSS('object-fit', 'contain')
+    await expect(image.locator('..')).toHaveClass(/aspect-square/)
+  }
+
+  if ((await page.evaluate(() => window.innerWidth)) >= 1024) {
+    await page
+      .getByRole('navigation', { name: 'Navegação principal' })
+      .getByRole('link', { name: 'Mercado', exact: true })
+      .click()
+    await expect(page).toHaveURL(/\/#mercado$/)
+    await expect(page.getByRole('region', { name: 'NFTs disponíveis' })).toBeVisible()
+  }
+})
+
+test('market navigation returns to collections and marketplace filters update the NFTs', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await page.goto('/')
+  await page
+    .getByRole('navigation', { name: 'Navegação principal' })
+    .getByRole('link', { name: 'Mercado', exact: true })
+    .click()
+
+  await expect(page).toHaveURL(/\/#mercado$/)
+  const marketplace = page.getByRole('region', { name: 'NFTs disponíveis' })
+  await expect(marketplace).toBeVisible()
+
+  await page.getByRole('button', { name: /Arte digital/ }).click()
+  await expect(marketplace.getByRole('link')).toHaveCount(4)
+  await expect(marketplace.getByRole('heading', { name: 'Emerald Ape #042' })).toBeVisible()
+
+  await page.getByRole('button', { name: /Arte digital/ }).click()
+  await page.getByRole('button', { name: /Polygon/ }).click()
+  await expect(marketplace.getByRole('link')).toHaveCount(9)
+  await expect(marketplace.getByRole('heading', { name: 'Sage Nomad #009' })).toBeVisible()
+  await expect(marketplace.getByRole('heading', { name: 'Violet Nomad #314' })).toBeVisible()
+
+  const maximumPrice = page.getByRole('slider', { name: 'Preço máximo' })
+  await maximumPrice.focus()
+  await maximumPrice.press('Home')
+  for (let step = 0; step < 47; step += 1) {
+    await maximumPrice.press('ArrowRight')
+  }
+  await expect(page.getByText('Preço: 0,02 - 0,50 ETH')).toBeVisible()
+  await page.getByRole('button', { name: /Aplicar faixa de preço/ }).click()
+  await expect(marketplace.getByRole('link')).toHaveCount(1)
+  await expect(marketplace.getByRole('heading', { name: 'Golden Signal #160' })).toBeVisible()
+  await expect(marketplace.getByRole('heading', { name: 'Sage Nomad #009' })).toHaveCount(0)
+})
+
+test('authentication modal switches to signup and toggles password visibility', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Entrar' }).click()
+
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible()
+  const dialogBounds = await dialog.boundingBox()
+  const viewport = page.viewportSize()
+  expect(dialogBounds).not.toBeNull()
+  expect(viewport).not.toBeNull()
+  expect(dialogBounds!.x + dialogBounds!.width / 2).toBeCloseTo(viewport!.width / 2, 0)
+  expect(dialogBounds!.y + dialogBounds!.height / 2).toBeCloseTo(viewport!.height / 2, 0)
+  await dialog.getByRole('button', { name: 'Criar conta', exact: true }).click()
+
+  const title = dialog.locator('#auth-modal-title')
+  await expect(title).toHaveCSS('font-size', '20px')
+  await expect(title).toHaveCSS('font-weight', '500')
+  await expect(title).toHaveCSS('line-height', '16px')
+  await expect(title.getByRole('button', { name: 'Criar conta' })).toHaveCSS('color', 'rgb(210, 138, 76)')
+  await expect(dialog.locator('[aria-hidden="true"].bg-primary')).toHaveCSS('height', '10px')
+  await expect(dialog.getByPlaceholder('Nome de usuário')).toBeVisible()
+  await expect(dialog.getByPlaceholder('Digite seu e-mail')).toBeVisible()
+  await expect(dialog.getByPlaceholder('Confirmar senha')).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Continuar com Google' })).toBeVisible()
+  const signupFormBounds = await dialog.locator('form').boundingBox()
+  const googleButtonBounds = await dialog.getByRole('button', { name: 'Continuar com Google' }).boundingBox()
+  expect(signupFormBounds).not.toBeNull()
+  expect(googleButtonBounds).not.toBeNull()
+  const expectedSocialSpacing = (page.viewportSize()?.width ?? 0) <= 700 ? 40 : 52
+  expect(googleButtonBounds!.y - signupFormBounds!.y - signupFormBounds!.height).toBeCloseTo(
+    expectedSocialSpacing,
+    0,
+  )
+
+  const passwordInput = dialog.getByPlaceholder('Senha', { exact: true })
+  await expect(passwordInput).toHaveAttribute('type', 'password')
+  await dialog.getByRole('button', { name: 'Mostrar senha' }).click()
+  await expect(passwordInput).toHaveAttribute('type', 'text')
+
+  await page.keyboard.press('Escape')
+  await expect(dialog).not.toBeVisible()
+})
+
+test('authentication modal fits HD and short viewport sizes', async ({ page }) => {
+  await page.goto('/')
+
+  for (const viewport of [{ width: 1280, height: 720 }, { width: 643, height: 598 }]) {
+    await page.setViewportSize(viewport)
+    await page.getByRole('button', { name: 'Entrar' }).click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+    const dialogBounds = await dialog.boundingBox()
+    expect(dialogBounds).not.toBeNull()
+    expect(dialogBounds!.width).toBe(500)
+    expect(dialogBounds!.height).toBeLessThanOrEqual(Math.min(656, viewport.height - 16))
+    if (viewport.height >= 720) expect(dialogBounds!.height).toBe(656)
+    expect(dialogBounds!.x + dialogBounds!.width / 2).toBeCloseTo(viewport.width / 2, 0)
+    expect(dialogBounds!.y + dialogBounds!.height / 2).toBeCloseTo(viewport.height / 2, 0)
+
+    await dialog.getByRole('button', { name: 'Criar conta', exact: true }).click()
+    const facebookButton = await dialog.getByRole('button', { name: 'Continuar com Facebook' }).boundingBox()
+    const footerStripe = await dialog.locator('[aria-hidden="true"].bg-primary').boundingBox()
+    expect(facebookButton).not.toBeNull()
+    expect(footerStripe).not.toBeNull()
+    expect(footerStripe!.y - facebookButton!.y - facebookButton!.height).toBeGreaterThanOrEqual(16)
+    expect(
+      Math.abs(footerStripe!.y + footerStripe!.height - dialogBounds!.y - dialogBounds!.height),
+    ).toBeLessThanOrEqual(1)
+
+    const closeButton = await dialog.getByRole('button', { name: 'Fechar' }).boundingBox()
+    expect(closeButton).not.toBeNull()
+    expect(closeButton!.x).toBeGreaterThanOrEqual(dialogBounds!.x + 20)
+    expect(closeButton!.y).toBeGreaterThanOrEqual(dialogBounds!.y + 20)
+
+    await page.keyboard.press('Escape')
+    await expect(dialog).not.toBeVisible()
+  }
+})
+
 test('home route renders promotional banners with their typography', async ({ page }) => {
   await page.goto('/')
 
@@ -225,7 +432,7 @@ test('home route renders the footer after the blog section', async ({ page }) =>
   }
 })
 
-test('marketplace grid shows nine NFTs and four pagination controls', async ({ page }) => {
+test('marketplace keeps nine NFTs per page and four populated pages', async ({ page }) => {
   await page.goto('/')
 
   const pagination = page.getByRole('navigation', { name: 'Paginação dos NFTs' })
@@ -244,7 +451,14 @@ test('marketplace grid shows nine NFTs and four pagination controls', async ({ p
     'page',
   )
   await expect(page.locator('#mercado ul li')).toHaveCount(9)
+  await expect(page.getByRole('heading', { name: 'Jade Guardian #073' })).toBeVisible()
+
+  await pagination.getByRole('button', { name: 'Página 3' }).click()
+  await expect(page.locator('#mercado ul li')).toHaveCount(9)
+  await expect(page.getByRole('heading', { name: 'Saffron Scout #204' })).toBeVisible()
 
   await pagination.getByRole('button', { name: 'Página 4' }).click()
+  await expect(page.locator('#mercado ul li')).toHaveCount(9)
+  await expect(page.getByRole('heading', { name: 'Sunlit Sage #346' })).toBeVisible()
   await expect(pagination.getByRole('button', { name: 'Próxima página' })).toBeDisabled()
 })

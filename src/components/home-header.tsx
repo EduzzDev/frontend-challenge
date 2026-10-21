@@ -1,8 +1,11 @@
+import { useRef, useState } from 'react'
+import { AuthModal } from '@/components/auth-modal'
+
 const navigationItems = [
-  { label: 'Início', href: '#inicio', active: true },
-  { label: 'Mercado', href: '#mercado', active: false },
-  { label: 'Criadores', href: '#criadores', active: false },
-  { label: 'Aprenda', href: '#aprenda', active: false },
+  { label: 'Início', href: '#inicio' },
+  { label: 'Mercado', href: '#mercado' },
+  { label: 'Criadores', href: '#criadores' },
+  { label: 'Aprenda', href: '#aprenda' },
 ]
 
 function SearchIcon() {
@@ -23,7 +26,21 @@ function CartIcon() {
   )
 }
 
-export function HomeHeader() {
+export function HomeHeader({
+  activeHref = '#inicio',
+  navigationPrefix = '',
+}: {
+  activeHref?: string
+  navigationPrefix?: string
+}) {
+  const [isAuthOpen, setIsAuthOpen] = useState(false)
+  const authTriggerRef = useRef<HTMLButtonElement>(null)
+
+  function closeAuthModal() {
+    setIsAuthOpen(false)
+    requestAnimationFrame(() => authTriggerRef.current?.focus())
+  }
+
   return (
     <header className="relative mx-auto flex h-17.25 w-full max-w-300 items-center justify-between px-4 md:px-0">
       <div aria-hidden="true" className="absolute inset-x-0 bottom-1 h-0 border-t-[0.3px] border-border" />
@@ -31,22 +48,22 @@ export function HomeHeader() {
         aria-label="Kurio - início"
         className="flex h-[34.3px] w-40 shrink-0 items-center font-mono text-sm 
         font-bold tracking-[0.12em] text-foreground max-md:flex-1"
-        href="#inicio"
+        href={`${navigationPrefix}#inicio`}
       >
         KURIO
       </a>
 
       <nav aria-label="Navegação principal" className="hidden h-11.25 w-100.25 
       shrink-0 items-center justify-between gap-10 lg:flex">
-        {navigationItems.map(({ label, href, active }) => (
+        {navigationItems.map(({ label, href }) => (
           <a
-            aria-current={active ? 'page' : undefined}
+            aria-current={activeHref === href ? 'page' : undefined}
             className={`relative flex h-full items-center border-b-4 border-transparent px-0.5 pt-0.5 font-mono text-base font-normal transition-colors ${
-              active
+              activeHref === href
                 ? 'font-bold text-primary after:absolute after:-bottom-3 after:left-0 after:right-0 after:h-1 after:bg-primary'
                 : 'text-foreground hover:text-primary'
             }`}
-            href={href}
+            href={href.startsWith('/') ? href : `${navigationPrefix}${href}`}
             key={label}
           >
             {label}
@@ -75,6 +92,8 @@ export function HomeHeader() {
           focus-visible:outline-none focus-visible:ring-2
            focus-visible:ring-ring focus-visible:ring-offset-2
             focus-visible:ring-offset-background"
+          onClick={() => setIsAuthOpen(true)}
+          ref={authTriggerRef}
           type="button"
         >
           <svg aria-hidden="true" width="100" height="35" viewBox="0 0 100 35" fill="none">
@@ -86,6 +105,7 @@ export function HomeHeader() {
           </svg>
         </button>
       </div>
+      {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
     </header>
   )
 }

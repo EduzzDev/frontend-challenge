@@ -1,24 +1,50 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ChevronRight } from 'lucide-react'
+import { nfts, type Nft } from '@/lib/nfts'
 
 const filters = ['Todos os NFTs', 'Novos lançamentos', 'Em alta']
-const pageCount = 4
+const PAGE_SIZE = 9
 
-const nfts = [
-  { name: 'Emerald Ape', number: '042', price: '1.19', image: '/images/hero-ape.png' },
-  { name: 'Sage Nomad', number: '009', price: '1.69', image: '/images/chill-chimp.png' },
-  { name: 'Neon Vessel', number: '552', price: '1.99', image: '/images/dapper-kong.png' },
-  { name: 'Cosmic Bloom', number: '118', price: '1.29', image: '/images/chill-chimp.png' },
-  { name: 'Violet Nomad', number: '314', price: '1.39', image: '/images/chill-chimp.png' },
-  { name: 'Ivory Baron', number: '008', price: '1.79', image: '/images/dapper-kong.png' },
-  { name: 'Golden Beat', number: '207', price: '0.99', image: '/images/DJ-golden-chimp.png' },
-  { name: 'Golden Signal', number: '160', price: '0.39', image: '/images/DJ-golden-chimp.png' },
-  { name: 'Golden Signal', number: '168', price: '0.39', image: '/images/DJ-golden-chimp.png' },
-]
+type NftMarketplaceGridProps = {
+  selectedCollection: string | null
+  selectedNetwork: string | null
+  priceRange: [number, number]
+}
 
-export function NftMarketplaceGrid() {
+export function NftMarketplaceGrid({
+  selectedCollection,
+  selectedNetwork,
+  priceRange,
+}: NftMarketplaceGridProps) {
   const [activeFilter, setActiveFilter] = useState(filters[0])
   const [currentPage, setCurrentPage] = useState(1)
+  const [sortOrder, setSortOrder] = useState('recent')
+
+  const filteredNfts = nfts.filter((nft) => {
+    const priceInCents = Number(nft.price) * 100
+    return (
+      (!selectedCollection || nft.collection === selectedCollection) &&
+      (!selectedNetwork || nft.network === selectedNetwork) &&
+      priceInCents >= priceRange[0] &&
+      priceInCents <= priceRange[1]
+    )
+  })
+
+  const sortedNfts = [...filteredNfts].sort((left, right) => {
+    if (sortOrder === 'price-low') return Number(left.price) - Number(right.price)
+    if (sortOrder === 'price-high') return Number(right.price) - Number(left.price)
+    return 0
+  })
+  const pageCount = Math.max(1, Math.ceil(sortedNfts.length / PAGE_SIZE))
+  const visibleNfts = sortedNfts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [selectedCollection, selectedNetwork, priceRange])
+
+  function getNftHref(nft: Nft) {
+    return `/nft/${nft.name.toLowerCase().replaceAll(' ', '-')}-${nft.number}`
+  }
 
   return (
     <section
@@ -50,7 +76,8 @@ export function NftMarketplaceGrid() {
           <select
             aria-label="Ordenar NFTs"
             className="h-10 rounded-md  border-0 bg-[#140D0A] px-3 font-mono text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            defaultValue="recent"
+            onChange={(event) => setSortOrder(event.target.value)}
+            value={sortOrder}
           >
             <option value="recent">Listados recentemente</option>
             <option value="price-low">Menor preço</option>
@@ -60,19 +87,23 @@ export function NftMarketplaceGrid() {
       </div>
 
       <ul className="grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
-        {nfts.map((nft) => (
+        {visibleNfts.map((nft) => (
           <li className="min-w-0" key={`${nft.name}-${nft.number}`}>
             <article>
-              <div className="h-75 w-full bg-surface-card p-3">
+              <a
+                aria-label={`Ver detalhes de ${nft.name} #${nft.number}`}
+                className="block aspect-square w-full overflow-hidden bg-surface-card p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                href={getNftHref(nft)}
+              >
                 <img
                   alt={`NFT ${nft.name} #${nft.number}`}
-                  className="h-full w-full rounded-xl object-cover"
+                  className="h-full w-full rounded-xl object-contain"
                   height={620}
                   loading="lazy"
                   src={nft.image}
                   width={620}
                 />
-              </div>
+              </a>
               <div className="mt-3 flex flex-col gap-1 font-mono">
                 <h2 className="truncate text-sm font-normal text-foreground">
                   {nft.name} #{nft.number}
@@ -84,7 +115,13 @@ export function NftMarketplaceGrid() {
         ))}
       </ul>
 
-      <nav aria-label="Paginação dos NFTs" className="mt-14 flex justify-end">
+      {visibleNfts.length === 0 && (
+        <p className="py-8 text-center font-mono text-sm text-text-secondary">
+          Nenhum NFT encontrado com os filtros selecionados.
+        </p>
+      )}
+
+      <nav aria-label="Paginação dos NFTs" className="mt-auto flex justify-end pt-8">
         <div className="flex gap-2.5">
           {Array.from({ length: pageCount }, (_, index) => index + 1).map((page) => (
             <button
