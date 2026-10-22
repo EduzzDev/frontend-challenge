@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AuthModal } from '@/components/auth-modal'
+import { useSession } from '@/hooks/use-session'
 
 const navigationItems = [
   { label: 'Início', href: '#inicio' },
@@ -52,6 +53,7 @@ export function HomeHeader({
   onMobileFiltersClick?: () => void
 }) {
   const [isAuthOpen, setIsAuthOpen] = useState(false)
+  const { session, logout, isLoggingOut } = useSession()
   const [selectedHref, setSelectedHref] = useState(() => getSelectedNavigationHref(activeHref))
   const authTriggerRef = useRef<HTMLButtonElement>(null)
 
@@ -156,12 +158,13 @@ export function HomeHeader({
           <CartIcon />
         </a>
         <button
-          aria-label="Entrar"
+          aria-label={session ? `Sair de ${session.user.displayName}` : 'Entrar'}
           className="h-8.75 w-25 shrink-0 rounded-md transition-opacity hover:opacity-90 max-lg:w-[76px]
           focus-visible:outline-none focus-visible:ring-2
            focus-visible:ring-ring focus-visible:ring-offset-2
             focus-visible:ring-offset-background"
-          onClick={() => setIsAuthOpen(true)}
+          disabled={isLoggingOut}
+          onClick={() => session ? logout() : setIsAuthOpen(true)}
           ref={authTriggerRef}
           type="button"
         >
@@ -199,9 +202,10 @@ export function HomeHeader({
         <img alt="" className="size-4" height="16" src="/images/carrinho.png" width="16" />
       </a>
       <button
-        aria-label="Entrar"
+        aria-label={session ? `Sair de ${session.user.displayName}` : 'Entrar'}
         className="flex size-10 items-center justify-center"
-        onClick={() => setIsAuthOpen(true)}
+        disabled={isLoggingOut}
+        onClick={() => session ? logout() : setIsAuthOpen(true)}
         ref={authTriggerRef}
         type="button"
       >

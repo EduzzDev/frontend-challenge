@@ -1,9 +1,12 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { ChevronLeft, Heart, ShoppingCart, Star } from 'lucide-react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { HomeHeader } from '@/components/home-header'
 import { HomeFooter } from '@/components/home-footer'
-import { addToCart } from '@/lib/cart'
+import { getNft } from '@/api/nfts'
+import { useAddToCart } from '@/hooks/use-cart'
+import { useFavorite } from '@/hooks/use-favorite'
 import { nfts, type Nft } from '@/lib/nfts'
 
 const editionOptions = ['1/1', '1/10', '1/50', 'ABERTA']
@@ -30,13 +33,19 @@ function nftSlug(nft: Nft) {
 export function NftDetailPage() {
   const { nftId } = useParams({ from: '/nft/$nftId' })
   const navigate = useNavigate()
-  const nft = nfts.find((item) => nftSlug(item) === nftId)
+  const nftQuery = useQuery({ queryKey: ['nft', nftId], queryFn: () => getNft(nftId) })
+  const nft = nftQuery.data
+  const addItem = useAddToCart()
   const [selectedThumbnail, setSelectedThumbnail] = useState(0)
   const [selectedEdition, setSelectedEdition] = useState('1/50')
   const [quantity, setQuantity] = useState(1)
-  const [isFavorite, setIsFavorite] = useState(false)
+  const favorite = useFavorite(nft?.id ?? '')
 
-  if (!nft) {
+  if (nftQuery.isPending) {
+    return <main aria-busy="true" className="mx-auto min-h-[60vh] w-full max-w-300 px-4 py-16 md:px-0"><div className="h-96 animate-pulse rounded-xl bg-surface-card" /></main>
+  }
+
+  if (!nft || nftQuery.error) {
     return (
       <>
         <HomeHeader activeHref="/nft/emerald-ape-042" navigationPrefix="/" mobileBrand={false} mobileNavigation={false} />
@@ -52,12 +61,11 @@ export function NftDetailPage() {
   }
 
   const selectedNft = nft
-  const relatedNfts = nfts.filter((item) => item !== nft).slice(0, 5)
+  const relatedNfts = nfts.filter((item) => item.name !== nft.name || item.number !== nft.number).slice(0, 5)
   const shareUrl = encodeURIComponent(window.location.href)
 
   function buyNft() {
-    addToCart(selectedNft, quantity)
-    void navigate({ to: '/cart' })
+    addItem.mutate({ nft: selectedNft, quantity }, { onSuccess: () => void navigate({ to: '/cart' }) })
   }
 
   return (
@@ -73,13 +81,13 @@ export function NftDetailPage() {
             <ChevronLeft aria-hidden="true" size={16} />
           </a>
           <button
-            aria-label={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
-            aria-pressed={isFavorite}
+            aria-label={favorite.isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+            aria-pressed={favorite.isFavorite}
             className="flex size-9 translate-y-[7px] items-center justify-center rounded-full bg-surface-raised text-primary"
-            onClick={() => setIsFavorite((favorite) => !favorite)}
+            onClick={favorite.toggleFavorite}
             type="button"
           >
-            <Heart aria-hidden="true" fill={isFavorite ? 'currentColor' : 'none'} size={13} />
+            <Heart aria-hidden="true" fill={favorite.isFavorite ? 'currentColor' : 'none'} size={13} />
           </button>
         </div>
         <nav aria-label="Navegação estrutural" className="py-4 font-mono text-sm text-text-secondary max-md:hidden">
@@ -201,14 +209,14 @@ export function NftDetailPage() {
                   COMPRAR
                 </button>
                 <button
-                  aria-pressed={isFavorite}
+                  aria-pressed={favorite.isFavorite}
                   className={`flex items-center gap-1 rounded-md border px-3 py-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                    isFavorite ? 'border-primary text-primary' : 'border-border text-text-secondary hover:border-primary hover:text-primary'
+                    favorite.isFavorite ? 'border-primary text-primary' : 'border-border text-text-secondary hover:border-primary hover:text-primary'
                   }`}
-                  onClick={() => setIsFavorite((favorite) => !favorite)}
+            onClick={favorite.toggleFavorite}
                   type="button"
                 >
-                  <Heart aria-hidden="true" fill={isFavorite ? 'currentColor' : 'none'} size={14} />
+                  <Heart aria-hidden="true" fill={favorite.isFavorite ? 'currentColor' : 'none'} size={14} />
                   Favoritar
                 </button>
               </div>
@@ -365,7 +373,7 @@ export function NftDetailPage() {
             <button
               aria-label="Adicionar ao carrinho"
               className="flex size-[60px] shrink-0 items-center justify-center rounded-[40px] border border-border bg-surface-raised text-primary"
-              onClick={() => addToCart(selectedNft, quantity)}
+              onClick={() => addItem.mutate({ nft: selectedNft, quantity })}
               type="button"
             >
               <ShoppingCart aria-hidden="true" size={17} />

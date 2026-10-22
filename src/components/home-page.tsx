@@ -1,4 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useNavigate, useSearch } from '@tanstack/react-router'
+import { getNfts } from '@/api/nfts'
 import { BlogCards } from '@/components/blog-cards'
 import { FeaturedNftBanner } from '@/components/featured-nft-banner'
 import { HomeFilters } from '@/components/home-filters'
@@ -9,11 +12,44 @@ import { NftMarketplaceGrid } from '@/components/nft-marketplace-grid'
 import { PromotionalBanners } from '@/components/promotional-banners'
 
 export function HomePage() {
-  const [selectedCollection, setSelectedCollection] = useState<string | null>(null)
-  const [selectedNetwork, setSelectedNetwork] = useState<string | null>(null)
-  const [priceRange, setPriceRange] = useState<[number, number]>([2, 1230])
-  const [searchQuery, setSearchQuery] = useState('')
+  const search = useSearch({ from: '/' })
+  const navigate = useNavigate({ from: '/' })
+  const [searchQuery, setSearchQuery] = useState(search.search ?? '')
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false)
+  const selectedCollection = search.collection ?? null
+  const selectedNetwork = search.network ?? null
+  const priceRange: [number, number] = [Number(search.minPrice ?? '0.02') * 100, Number(search.maxPrice ?? '12.30') * 100]
+  const catalogParams = {
+    search: search.search,
+    collection: search.collection,
+    network: search.network,
+    minPrice: search.minPrice,
+    maxPrice: search.maxPrice,
+    sort: search.sort,
+    page: search.page,
+  }
+  const catalog = useQuery({
+    queryKey: ['nfts', catalogParams],
+    queryFn: ({ signal }) => getNfts(catalogParams, signal),
+  })
+
+  useEffect(() => setSearchQuery(search.search ?? ''), [search.search])
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (searchQuery !== (search.search ?? '')) {
+        void navigate({ search: (previous) => ({ ...previous, search: searchQuery || undefined, page: 1 }), replace: true })
+      }
+    }, 250)
+    return () => window.clearTimeout(timer)
+  }, [navigate, search.search, searchQuery])
+
+  function updateCatalogSearch(values: Partial<typeof catalogParams>) {
+    void navigate({ search: (previous) => ({ ...previous, ...values }) })
+  }
+
+  function applyPriceRange(range: [number, number]) {
+    updateCatalogSearch({ minPrice: (range[0] / 100).toFixed(2), maxPrice: (range[1] / 100).toFixed(2), page: 1 })
+  }
 
   return (
     <>
@@ -29,9 +65,9 @@ export function HomePage() {
           <div className="flex w-full flex-col gap-0 md:flex-row md:items-start md:gap-8">
             <div className="flex w-77.5 shrink-0 flex-col gap-5 max-md:hidden">
               <HomeFilters
-                onCollectionChange={setSelectedCollection}
-                onNetworkChange={setSelectedNetwork}
-                onPriceRangeApply={setPriceRange}
+                onCollectionChange={(collection) => updateCatalogSearch({ collection: collection ?? undefined, page: 1 })}
+                onNetworkChange={(network) => updateCatalogSearch({ network: network ?? undefined, page: 1 })}
+                onPriceRangeApply={applyPriceRange}
                 priceRange={priceRange}
                 selectedCollection={selectedCollection}
                 selectedNetwork={selectedNetwork}
@@ -39,10 +75,15 @@ export function HomePage() {
               <FeaturedNftBanner />
             </div>
             <NftMarketplaceGrid
-              priceRange={priceRange}
-              selectedCollection={selectedCollection}
-              selectedNetwork={selectedNetwork}
-              searchQuery={searchQuery}
+              items={catalog.data?.items ?? []}
+              isLoading={catalog.isPending}
+              error={catalog.error}
+              onRetry={() => void catalog.refetch()}
+              page={search.page}
+              onPageChange={(page) => updateCatalogSearch({ page })}
+              sortOrder={search.sort ?? 'recent'}
+              onSortChange={(sort) => updateCatalogSearch({ sort, page: 1 })}
+              total={catalog.data?.total ?? 0}
             />
           </div>
         </div>
@@ -70,9 +111,9 @@ export function HomePage() {
               </button>
               <HomeFilters
                 className="max-md:w-full max-md:px-3 max-md:pt-8"
-                onCollectionChange={setSelectedCollection}
-                onNetworkChange={setSelectedNetwork}
-                onPriceRangeApply={setPriceRange}
+                onCollectionChange={(collection) => updateCatalogSearch({ collection: collection ?? undefined, page: 1 })}
+                onNetworkChange={(network) => updateCatalogSearch({ network: network ?? undefined, page: 1 })}
+                onPriceRangeApply={applyPriceRange}
                 priceRange={priceRange}
                 selectedCollection={selectedCollection}
                 selectedNetwork={selectedNetwork}

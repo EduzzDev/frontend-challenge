@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 const collections = [
   { label: 'Arte digital', count: 33 },
@@ -42,6 +42,13 @@ export function HomeFilters({
 }: HomeFiltersProps) {
   const [minPrice, setMinPrice] = useState(priceRange[0])
   const [maxPrice, setMaxPrice] = useState(priceRange[1])
+  const appliedMinPrice = priceRange[0]
+  const appliedMaxPrice = priceRange[1]
+
+  useEffect(() => {
+    setMinPrice(appliedMinPrice)
+    setMaxPrice(appliedMaxPrice)
+  }, [appliedMinPrice, appliedMaxPrice])
 
   const applyPriceRange = () => {
     onPriceRangeApply([minPrice, maxPrice])

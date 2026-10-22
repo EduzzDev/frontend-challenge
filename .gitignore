@@ -2,6 +2,7 @@ node_modules/
 dist/
 playwright-report/
 test-results/
+test-results-qa*/
 playwright/.cache/
 coverage/
 *.log

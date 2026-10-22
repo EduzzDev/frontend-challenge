@@ -91,7 +91,7 @@ export function HomeFooter() {
           <div className="mx-auto grid max-w-[1154px] grid-cols-1 gap-x-6 gap-y-8 md:grid-cols-2 xl:h-full xl:grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,1.3fr)] xl:gap-x-0 xl:gap-y-0">
             {footerFeatures.map(({ initial, title, description }) => (
               <article
-                className="min-w-0 px-3 md:px-0 max-[359px]:px-1 xl:border-r xl:border-primary/70"
+                className="min-w-0 px-3 md:px-0 max-[359px]:px-1 xl:px-5 xl:border-r xl:border-primary/70"
                 key={initial}
               >
                 <div
@@ -109,14 +109,14 @@ export function HomeFooter() {
               </article>
             ))}
 
-            <section aria-labelledby="footer-newsletter-title" className="min-w-0 px-3 md:px-0">
+            <section aria-labelledby="footer-newsletter-title" className="min-w-0 px-3 md:px-0 xl:px-5">
               <h2
-                className="max-w-[325px] font-mono text-base font-bold leading-6 text-foreground sm:text-lg xl:w-[325px]"
+                className="w-full max-w-[325px] font-mono text-base font-bold leading-6 text-foreground sm:text-lg"
                 id="footer-newsletter-title"
               >
                 Antecipe-se ao próximo lançamento
               </h2>
-              <div className="mt-4 flex h-10 w-full max-w-[325px] overflow-hidden rounded-md bg-surface-dark xl:w-[325px]">
+              <div className="mt-4 flex h-10 w-full max-w-[325px] overflow-hidden rounded-md bg-surface-dark">
                 <input
                   aria-label="Seu e-mail"
                   className="min-w-0 flex-1 bg-transparent px-3 font-mono text-sm leading-4 text-foreground outline-none placeholder:text-secondary focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
@@ -130,7 +130,7 @@ export function HomeFooter() {
                   Enviar
                 </button>
               </div>
-              <p className="mt-3 min-h-[66px] max-w-[325px] font-mono text-sm font-normal leading-[22px] text-text-secondary xl:w-[325px]">
+              <p className="mt-3 min-h-[66px] w-full max-w-[325px] font-mono text-sm font-normal leading-[22px] text-text-secondary">
                 Receba lançamentos selecionados, histórias de criadores e novidades do mercado.
               </p>
             </section>

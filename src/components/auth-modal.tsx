@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { login, signup } from '@/api/auth'
 
 type AuthMode = 'login' | 'signup'
 
@@ -24,16 +26,19 @@ function PasswordField({
   visible,
   onToggle,
   autoComplete,
+  name,
 }: {
   placeholder: string
   visible: boolean
   onToggle: () => void
   autoComplete: string
+  name: string
 }) {
   return (
     <label className="relative block">
       <input
         autoComplete={autoComplete}
+        name={name}
         className="h-10 w-full rounded-[5px] border border-border bg-transparent px-3 pr-10 font-mono text-sm leading-4 text-foreground outline-none placeholder:text-secondary focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary max-[700px]:h-[50px] max-[700px]:rounded-[10px]"
         placeholder={placeholder}
         required
@@ -85,6 +90,41 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
   const [mode, setMode] = useState<AuthMode>('login')
   const [passwordVisible, setPasswordVisible] = useState(false)
   const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false)
+  const [formError, setFormError] = useState('')
+  const queryClient = useQueryClient()
+
+  async function finishSignIn(promise: Promise<import('@/types/domain').Session>) {
+    try {
+      const session = await promise
+      window.localStorage.setItem('kurio-session-token', session.token)
+      window.localStorage.setItem('kurio-user-id', session.user.id)
+      queryClient.setQueryData(['session', session.user.id], session)
+      window.dispatchEvent(new Event('kurio-session-changed'))
+      await queryClient.invalidateQueries({ predicate: (query) => ['cart', 'favorites', 'orders', 'profile', 'wallets'].includes(String(query.queryKey[0])) })
+      onClose()
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Não foi possível autenticar. Tente novamente.')
+    }
+  }
+
+  function submitSignup(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const values = new FormData(event.currentTarget)
+    const password = String(values.get('password'))
+    if (password !== String(values.get('confirmPassword'))) {
+      setFormError('As senhas não coincidem.')
+      return
+    }
+    setFormError('')
+    void finishSignIn(signup(String(values.get('username')), String(values.get('email')), password))
+  }
+
+  function submitLogin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const values = new FormData(event.currentTarget)
+    setFormError('')
+    void finishSignIn(login(String(values.get('email')), String(values.get('password'))))
+  }
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -155,17 +195,21 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
           {mode === 'signup' ? 'Criar perfil de colecionador' : 'Entrar'}
         </h1>
 
+        {formError && <p aria-live="assertive" className="mt-4 font-mono text-sm text-primary" role="alert">{formError}</p>}
+
         {mode === 'signup' ? (
           <>
-          <form className="mt-5 flex flex-col gap-3 max-[700px]:mt-5 max-[700px]:w-full max-[700px]:gap-3" onSubmit={(event) => event.preventDefault()}>
+          <form className="mt-5 flex flex-col gap-3 max-[700px]:mt-5 max-[700px]:w-full max-[700px]:gap-3" onSubmit={submitSignup}>
             <input
               autoComplete="username"
+              name="username"
               className="h-10 w-full rounded-[5px] border border-border bg-transparent px-3 font-mono text-sm leading-4 text-foreground outline-none placeholder:text-secondary focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary max-[700px]:h-[50px] max-[700px]:rounded-[10px]"
               placeholder="Nome de usuário"
               required
             />
             <input
               autoComplete="email"
+              name="email"
               className="h-10 w-full rounded-[5px] border border-border bg-transparent px-3 font-mono text-sm leading-4 text-foreground outline-none placeholder:text-secondary focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary max-[700px]:h-[50px] max-[700px]:rounded-[10px]"
               placeholder="Digite seu e-mail"
               required
@@ -173,12 +217,14 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
             />
             <PasswordField
               autoComplete="new-password"
+              name="password"
               onToggle={() => setPasswordVisible((visible) => !visible)}
               placeholder="Senha"
               visible={passwordVisible}
             />
             <PasswordField
               autoComplete="new-password"
+              name="confirmPassword"
               onToggle={() => setConfirmPasswordVisible((visible) => !visible)}
               placeholder="Confirmar senha"
               visible={confirmPasswordVisible}
@@ -193,9 +239,10 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
           </form>
           </>
         ) : (
-          <form className="mt-5 flex flex-col gap-3 max-[700px]:mt-6 max-[700px]:w-full max-[700px]:gap-3" onSubmit={(event) => event.preventDefault()}>
+          <form className="mt-5 flex flex-col gap-3 max-[700px]:mt-6 max-[700px]:w-full max-[700px]:gap-3" onSubmit={submitLogin}>
             <input
               autoComplete="email"
+              name="email"
               className="h-10 w-full rounded-[5px] border border-border bg-transparent px-3 font-mono text-sm leading-4 text-foreground outline-none placeholder:text-secondary focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary max-[700px]:h-[50px] max-[700px]:rounded-[10px]"
               placeholder="contato@email.com"
               required
@@ -203,6 +250,7 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
             />
             <PasswordField
               autoComplete="current-password"
+              name="password"
               onToggle={() => setPasswordVisible((visible) => !visible)}
               placeholder="Senha"
               visible={passwordVisible}

@@ -13,7 +13,7 @@ const queryClient = new QueryClient({
 })
 
 async function startApp() {
-  if (import.meta.env.DEV && import.meta.env.VITE_ENABLE_MOCKS === 'true') {
+  if (import.meta.env.VITE_ENABLE_MOCKS !== 'false') {
     const { worker } = await import('./mocks/browser')
     await worker.start({ onUnhandledRequest: 'bypass' })
   }

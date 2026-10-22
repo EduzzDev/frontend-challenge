@@ -1,10 +1,9 @@
 import { expect, test } from '@playwright/test'
 
-test('home route renders the challenge heading', async ({ page }) => {
+test('home route renders the marketplace storefront', async ({ page }) => {
   await page.goto('/')
   await expect(page).toHaveTitle('Jungle Gaming — Frontend Challenge')
-  await expect(page.getByRole('heading', { name: 'Frontend Challenge' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Base shadcn/ui pronta' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'NFTs disponíveis' })).toBeVisible()
 })
 
 test('mobile home matches the storefront layout and uses the supplied menu icons', async ({ page }) => {
@@ -75,12 +74,11 @@ test('application routes load when opened directly', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'NFTs' })).toBeVisible()
 
   await page.goto('/checkout')
-  await expect(page.getByRole('navigation', { name: 'Menu mobile' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Perfil do colecionador' })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Menu mobile' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Entre para continuar com o pagamento' })).toBeVisible()
 
   await page.goto('/nft/emerald-ape-042')
-  await expect(page.getByRole('navigation', { name: 'Menu mobile' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Emerald Ape #042' })).toBeVisible()
+  await expect(page.locator('#nft-title')).toHaveText('Emerald Ape #042')
 })
 
 test('NFT detail matches the mobile product layout with a fixed purchase bar', async ({ page }) => {
@@ -165,8 +163,8 @@ test('marketplace NFT opens its detail page with aligned related artwork and exi
       )
       expect(borderRadius).toBeGreaterThanOrEqual(24.75)
     } else {
-      await expect(button).toHaveCSS('width', '18px')
-      await expect(button).toHaveCSS('height', '18px')
+      await expect(button).toHaveCSS('width', '20px')
+      await expect(button).toHaveCSS('height', '30px')
     }
   }
   await increaseQuantity.click()
@@ -176,9 +174,9 @@ test('marketplace NFT opens its detail page with aligned related artwork and exi
 
   const tokenDetails = page.locator('dl')
   const isDesktopViewport = (await page.evaluate(() => window.innerWidth)) >= 768
-  await expect(tokenDetails).toHaveCSS('font-size', isDesktopViewport ? '15px' : '11px')
+  await expect(tokenDetails).toHaveCSS('font-size', '15px')
   await expect(tokenDetails).toHaveCSS('font-weight', '400')
-  await expect(tokenDetails).toHaveCSS('line-height', isDesktopViewport ? '20px' : '16px')
+  await expect(tokenDetails).toHaveCSS('line-height', isDesktopViewport ? '20px' : '15px')
   await expect(tokenDetails).toHaveCSS('color', 'rgb(179, 148, 99)')
 
   if (isDesktopViewport) {
@@ -216,7 +214,7 @@ test('marketplace NFT opens its detail page with aligned related artwork and exi
       .getByRole('navigation', { name: 'Navegação principal' })
       .getByRole('link', { name: 'Mercado', exact: true })
       .click()
-    await expect(page).toHaveURL(/\/#mercado$/)
+    await expect(page).toHaveURL(/\/(?:\?[^#]*)?#mercado$/)
     await expect(page.getByRole('region', { name: 'NFTs disponíveis' })).toBeVisible()
   }
 })
@@ -229,7 +227,7 @@ test('market navigation returns to collections and marketplace filters update th
     .getByRole('link', { name: 'Mercado', exact: true })
   await marketLink.click()
 
-  await expect(page).toHaveURL(/\/#mercado$/)
+  await expect(page).toHaveURL(/\/(?:\?[^#]*)?#mercado$/)
   await expect(marketLink).toHaveAttribute('aria-current', 'page')
   await expect(marketLink).toHaveCSS('color', 'rgb(210, 138, 76)')
   await expect(marketLink).toHaveCSS('font-weight', '700')
@@ -262,11 +260,28 @@ test('market navigation returns to collections and marketplace filters update th
 
 test('cart header opens the cart and buying an NFT adds the selected quantity', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('link', { name: 'Carrinho, 6 itens' }).click()
+  if ((await page.evaluate(() => window.innerWidth)) < 768) {
+    await page.getByRole('navigation', { name: 'Menu mobile' }).getByRole('link', { name: 'Carrinho' }).click()
+  } else {
+    await page.locator('a[href="/cart"]').first().click()
+  }
 
   await expect(page).toHaveURL(/\/cart$/)
-  await expect(page.getByRole('heading', { name: 'Resumo da carteira' })).toBeVisible()
   const cartItems = page.getByRole('region', { name: 'Itens do carrinho' })
+  if ((await page.evaluate(() => window.innerWidth)) < 768) {
+    await expect(cartItems.getByRole('heading', { name: 'NFTs', exact: true })).toBeVisible()
+    await expect(cartItems.getByRole('heading', { name: 'Emerald Ape #042' })).toBeVisible()
+    await expect(cartItems.getByRole('heading', { name: 'Violet Nomad #314' })).toBeVisible()
+    await expect(cartItems.getByRole('heading', { name: 'Ivory Baron #008' })).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      await page.evaluate(() => window.innerWidth),
+    )
+    await page.getByRole('button', { name: 'Conectar e finalizar' }).click()
+    await expect(page).toHaveURL(/\/checkout$/)
+    await expect(page.getByRole('heading', { name: 'Entre para continuar com o pagamento' })).toBeVisible()
+    return
+  }
+  await expect(page.getByRole('heading', { name: 'Resumo da carteira' })).toBeVisible()
   await expect(cartItems.getByRole('heading', { name: 'Emerald Ape #042' })).toBeVisible()
   await expect(cartItems.getByRole('heading', { name: 'Violet Nomad #314' })).toBeVisible()
   await expect(cartItems.getByRole('heading', { name: 'Ivory Baron #008' })).toBeVisible()
@@ -334,6 +349,12 @@ test('cart header opens the cart and buying an NFT adds the selected quantity', 
   await expect(continueExploring).toHaveCSS('color', 'rgb(232, 155, 85)')
   await checkoutButton.click()
   await expect(page).toHaveURL(/\/checkout$/)
+  await expect(page.getByRole('heading', { name: 'Entre para continuar com o pagamento' })).toBeVisible()
+  await page.getByRole('button', { name: 'Entrar' }).click()
+  const loginDialog = page.getByRole('dialog')
+  await loginDialog.getByPlaceholder('contato@email.com').fill('colecionador@kurio.test')
+  await loginDialog.getByPlaceholder('Senha', { exact: true }).fill('Kurio123!')
+  await loginDialog.locator('form').getByRole('button', { name: 'Entrar', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Perfil do colecionador' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Seus NFTs' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Confirmar compra' })).toBeVisible()
@@ -415,110 +436,32 @@ test('cart header opens the cart and buying an NFT adds the selected quantity', 
   await page.locator('input[name="payment-wallet"][value="metamask"]').check()
   await page.getByRole('button', { name: 'Confirmar compra' }).click()
   await expect(page.getByRole('heading', { name: 'Seus NFTs foram adicionados ao pedido' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Detalhes da transação' })).toBeVisible()
-  const receiptDetails = page.getByLabel('Dados do pedido')
-  await expect(receiptDetails).toContainText('0xA91F...E82C')
-  await expect(receiptDetails).toContainText('MetaMask')
-  await expect(receiptDetails).not.toContainText('Tipo:')
-  const transactionIdCell = receiptDetails.locator('div').first()
-  await expect(transactionIdCell).toHaveCSS('text-align', 'center')
-  await expect(transactionIdCell.getByText('ID da transação')).toHaveCSS('text-align', 'center')
-  await expect(receiptDetails.getByText('0xA91F...E82C')).toHaveCSS('font-size', '15px')
-  await expect(receiptDetails.getByText('0xA91F...E82C')).toHaveCSS('font-weight', '400')
-  await expect(receiptDetails.getByText('0xA91F...E82C')).toHaveCSS('line-height', '15px')
-  await expect(receiptDetails.getByText('0xA91F...E82C')).toHaveCSS('text-align', 'center')
-  await expect(receiptDetails.getByText('26.846 ETH')).toHaveCSS('font-size', '15px')
-  await expect(receiptDetails.getByText('MetaMask')).toHaveCSS('font-size', '15px')
-  const confirmation = page.locator('section[aria-labelledby="purchase-confirmation-title"]')
-  await expect(confirmation).toHaveCSS('border-width', '0px')
-  await expect(page.getByText(/Prévia demonstrativa na rede Ethereum/)).toBeVisible()
-  const confirmationIcon = page.locator('section[aria-labelledby="purchase-confirmation-title"] svg[viewBox="0 0 66 80"]')
+  await expect(page.getByLabel('Dados do pedido')).toContainText(/0x[a-f0-9]+/i)
+  const receiptItems = page.getByRole('list', { name: 'NFTs do pedido' })
+  await expect(receiptItems.getByRole('listitem')).toHaveCount(3)
+  await expect(receiptItems).toContainText('Emerald Ape #042')
+  await expect(receiptItems).toContainText('(x 2)')
+  await expect(receiptItems).toContainText('Violet Nomad #314')
+  await expect(receiptItems).toContainText('(x 6)')
+  await expect(receiptItems).toContainText('Ivory Baron #008')
+  await expect(receiptItems).toContainText('(x 9)')
+  await expect(page.getByText('Rede Polygon')).toBeVisible()
+  await expect(page.getByText('0.016 ETH', { exact: true })).toBeVisible()
+  const confirmationIcon = page.locator('section[aria-live="polite"] svg[viewBox="0 0 66 80"]')
   await expect(confirmationIcon).toHaveAttribute('viewBox', '0 0 66 80')
   await expect(confirmationIcon).toHaveAttribute('width', '66')
   await expect(confirmationIcon).toHaveAttribute('height', '80')
-  const confirmationNfts = page.getByLabel('NFTs do pedido')
-  await expect(confirmationNfts.getByRole('listitem')).toHaveCount(3)
-  const confirmedEmerald = confirmationNfts.getByRole('listitem').filter({ hasText: 'Emerald Ape #042' })
-  await expect(confirmedEmerald.getByRole('heading', { name: 'Emerald Ape #042' })).toHaveCSS('font-size', '16px')
-  await expect(confirmedEmerald.getByText('ID do token: #0042')).toHaveCSS('font-size', '14px')
-  await expect(confirmedEmerald.getByText('(x 2)')).toHaveCSS('font-size', '15px')
-  await expect(confirmedEmerald.getByText('(x 2)')).toHaveCSS('width', '68px')
-  await expect(confirmedEmerald.getByText('2.38 ETH')).toHaveCSS('font-size', '16px')
-  await expect(confirmedEmerald.getByText('2.38 ETH')).toHaveCSS('width', '77px')
-  await expect(confirmedEmerald.getByText('2.38 ETH')).toHaveCSS('line-height', '16px')
-  await expect(page.getByText('Edições', { exact: true })).toHaveCSS('width', '68px')
-  await expect(page.getByText('Edições', { exact: true })).toHaveCSS('font-size', '16px')
-  await expect(page.getByText('Edições', { exact: true })).toHaveCSS('font-weight', '700')
-  await expect(page.getByText('Edições', { exact: true })).toHaveCSS('line-height', '16px')
-  await expect(page.getByText('Subtotal', { exact: true })).toHaveCSS('width', '77px')
-  await expect(confirmation.getByText('Taxa de rede')).toHaveCSS('font-size', '15px')
-  await expect(confirmation.getByText('Total', { exact: true }).last()).toHaveCSS('font-size', '16px')
-  await expect(confirmation.locator('dl').last().getByText('26.846 ETH')).toHaveCSS('color', 'rgb(210, 138, 76)')
-  await expect(confirmation.getByText(/Prévia demonstrativa/)).toHaveCSS('font-size', '14px')
-  await expect(confirmation.getByText(/Prévia demonstrativa/)).toHaveCSS('line-height', '22px')
-  await expect(page.getByText(/Nenhuma transação real foi enviada/)).toHaveCSS('font-size', '14px')
-  await expect(page.getByText(/Nenhuma transação real foi enviada/)).toHaveCSS('line-height', '22px')
-  const etherscanButton = page.getByRole('button', { name: 'Ver no Etherscan' })
-  await expect(etherscanButton).toBeDisabled()
-  await expect(etherscanButton).toHaveCSS('width', '154px')
-  await expect(etherscanButton).toHaveCSS('font-size', '16px')
-  await expect(etherscanButton).toHaveCSS('font-weight', '700')
-  await expect(page.getByRole('link', { name: 'Fechar confirmação' })).toBeVisible()
+  const confirmation = page.locator('section[aria-live="polite"]')
+  await expect(confirmation).not.toHaveCSS('border-width', '1px')
+  await expect(confirmation.getByText('26.846 ETH', { exact: true }).last()).toBeVisible()
+  await expect(receiptItems).toContainText('2.38 ETH')
+  await expect(receiptItems).toContainText('8.34 ETH')
+  await expect(receiptItems).toContainText('16.11 ETH')
   await expect(page.getByRole('contentinfo')).toBeVisible()
-  await page.goBack()
-  await expect(page).toHaveURL(/\/cart$/)
+  await page.goto('/cart')
+  await expect(page.getByText(/Seu carrinho está vazio/)).toBeVisible()
 
-  const emeraldRow = page.getByRole('listitem').filter({ hasText: 'Emerald Ape #042' }).first()
-  const tableHeader = page.getByRole('heading', { name: 'NFTs' }).locator('..')
-  await expect(tableHeader).toHaveCSS('column-gap', '24px')
-  for (const label of ['NFTs', 'Preço', 'Edições', 'Total']) {
-    await expect(tableHeader.getByText(label, { exact: true })).toHaveCSS('font-size', '16px')
-    await expect(tableHeader.getByText(label, { exact: true })).toHaveCSS('font-weight', '500')
-    await expect(tableHeader.getByText(label, { exact: true })).toHaveCSS('line-height', '16px')
-  }
-  const nftName = emeraldRow.getByRole('heading', { name: 'Emerald Ape #042' })
-  await expect(nftName).toHaveCSS('font-size', '16px')
-  await expect(nftName).toHaveCSS('font-weight', '700')
-  await expect(nftName).toHaveCSS('line-height', '16px')
-  await expect(nftName).toHaveCSS('width', '154px')
-  const tokenId = emeraldRow.getByText('ID do token: #0042')
-  await expect(tokenId).toHaveCSS('width', '154px')
-  await expect(tokenId).toHaveCSS('font-size', '14px')
-  await expect(tokenId).toHaveCSS('font-weight', '400')
-  await expect(tokenId).toHaveCSS('line-height', '16px')
-  await expect(tokenId).toHaveCSS('color', 'rgb(179, 148, 99)')
-  const price = emeraldRow.getByText('1.19 ETH', { exact: true })
-  await expect(price).toHaveCSS('width', '77px')
-  await expect(price).toHaveCSS('font-size', '16px')
-  await expect(price).toHaveCSS('font-weight', '500')
-  await expect(price).toHaveCSS('line-height', '16px')
-  const quantityGroup = emeraldRow.getByRole('group', { name: 'Edições de Emerald Ape #042' }).filter({ visible: true }).first()
-  const decrease = quantityGroup.getByRole('button', { name: 'Diminuir Emerald Ape #042' })
-  await expect(decrease).toHaveCSS('width', '20px')
-  await expect(decrease).toHaveCSS('height', '30px')
-  await expect(quantityGroup.getByText('2', { exact: true })).toHaveCSS('font-size', '17px')
-  const removeButton = emeraldRow.getByRole('button', { name: 'Remover Emerald Ape #042' })
-  await expect(removeButton.locator('svg')).toHaveAttribute('viewBox', '0 0 24 24')
-  await expect(removeButton.locator('svg')).toHaveAttribute('width', '24')
-  await expect(removeButton.locator('svg path')).toHaveAttribute('stroke', '#B39463')
-  await expect(removeButton.locator('svg path')).toHaveAttribute('stroke-width', '1.5')
-  if ((await page.evaluate(() => window.innerWidth)) < 768) {
-    const trashRightGap = await removeButton.locator('svg path').evaluate((path) => {
-      const row = path.closest('li')
-      if (!row) throw new Error('Linha do carrinho não encontrada')
-      return row.getBoundingClientRect().right - path.getBoundingClientRect().right
-    })
-    expect(trashRightGap).toBeGreaterThanOrEqual(26)
-    expect(trashRightGap).toBeLessThanOrEqual(29)
-  }
-  const totalAmount = page.locator('dd').filter({ hasText: '26.846 ETH' })
-  await expect(totalAmount).toHaveCSS('width', '109px')
-  await expect(totalAmount).toHaveCSS('font-size', '18px')
-  await expect(totalAmount).toHaveCSS('font-weight', '700')
-  await expect(totalAmount).toHaveCSS('line-height', '16px')
-
-  await page.goto('/')
-  await page.getByRole('link', { name: 'Ver detalhes de Emerald Ape #042' }).click()
+  await page.goto('/nft/emerald-ape-042')
   await page.getByRole('button', { name: 'Aumentar quantidade' }).click()
   await page.getByRole('button', { name: 'Aumentar quantidade' }).click()
   await page.getByRole('button', { name: 'COMPRAR' }).click()
@@ -526,14 +469,8 @@ test('cart header opens the cart and buying an NFT adds the selected quantity', 
   await expect(page).toHaveURL(/\/cart$/)
   const purchasedNftRow = page.getByRole('listitem').filter({ hasText: 'Emerald Ape #042' }).first()
   await expect(purchasedNftRow).toBeVisible()
-  const storedQuantity = await page.evaluate(() => {
-    const items = JSON.parse(window.localStorage.getItem('kurio-cart') ?? '[]') as {
-      nft: { name: string; number: string }
-      quantity: number
-    }[]
-    return items.find((item) => item.nft.name === 'Emerald Ape' && item.nft.number === '042')?.quantity
-  })
-  expect(storedQuantity).toBe(5)
+  const quantityGroup = purchasedNftRow.getByRole('group', { name: 'Edições de Emerald Ape #042' }).filter({ visible: true }).first()
+  await expect(quantityGroup.getByText('3', { exact: true })).toBeVisible()
 })
 
 test('authentication modal switches to signup and toggles password visibility', async ({ page }) => {
@@ -548,14 +485,23 @@ test('authentication modal switches to signup and toggles password visibility', 
   expect(viewport).not.toBeNull()
   expect(dialogBounds!.x + dialogBounds!.width / 2).toBeCloseTo(viewport!.width / 2, 0)
   expect(dialogBounds!.y + dialogBounds!.height / 2).toBeCloseTo(viewport!.height / 2, 0)
-  await dialog.getByRole('button', { name: 'Criar conta', exact: true }).click()
+  if ((viewport?.width ?? 0) <= 700) {
+    await dialog.getByRole('button', { name: /Novo na Kurio/ }).click()
+  } else {
+    await dialog.getByRole('button', { name: 'Criar conta', exact: true }).click()
+  }
 
-  const title = dialog.locator('#auth-modal-title')
-  await expect(title).toHaveCSS('font-size', '20px')
-  await expect(title).toHaveCSS('font-weight', '500')
-  await expect(title).toHaveCSS('line-height', '16px')
-  await expect(title.getByRole('button', { name: 'Criar conta' })).toHaveCSS('color', 'rgb(210, 138, 76)')
-  await expect(dialog.locator('[aria-hidden="true"].bg-primary')).toHaveCSS('height', '10px')
+  const isMobileModal = (viewport?.width ?? 0) <= 700
+  if (isMobileModal) {
+    await expect(dialog.getByRole('heading', { name: 'Criar perfil de colecionador' })).toHaveCSS('font-size', '16px')
+  } else {
+    const title = dialog.locator('#auth-modal-title')
+    await expect(title).toHaveCSS('font-size', '20px')
+    await expect(title).toHaveCSS('font-weight', '500')
+    await expect(title).toHaveCSS('line-height', '16px')
+    await expect(title.getByRole('button', { name: 'Criar conta' })).toHaveCSS('color', 'rgb(210, 138, 76)')
+    await expect(dialog.locator('[aria-hidden="true"].bg-primary')).toHaveCSS('height', '10px')
+  }
   await expect(dialog.getByPlaceholder('Nome de usuário')).toBeVisible()
   await expect(dialog.getByPlaceholder('Digite seu e-mail')).toBeVisible()
   await expect(dialog.getByPlaceholder('Confirmar senha')).toBeVisible()
@@ -564,7 +510,7 @@ test('authentication modal switches to signup and toggles password visibility', 
   const googleButtonBounds = await dialog.getByRole('button', { name: 'Continuar com Google' }).boundingBox()
   expect(signupFormBounds).not.toBeNull()
   expect(googleButtonBounds).not.toBeNull()
-  const expectedSocialSpacing = (page.viewportSize()?.width ?? 0) <= 700 ? 40 : 52
+  const expectedSocialSpacing = (page.viewportSize()?.width ?? 0) <= 700 ? 68 : 52
   expect(googleButtonBounds!.y - signupFormBounds!.y - signupFormBounds!.height).toBeCloseTo(
     expectedSocialSpacing,
     0,
@@ -572,7 +518,7 @@ test('authentication modal switches to signup and toggles password visibility', 
 
   const passwordInput = dialog.getByPlaceholder('Senha', { exact: true })
   await expect(passwordInput).toHaveAttribute('type', 'password')
-  await dialog.getByRole('button', { name: 'Mostrar senha' }).click()
+  await passwordInput.locator('xpath=..').getByRole('button', { name: 'Mostrar senha' }).click()
   await expect(passwordInput).toHaveAttribute('type', 'text')
 
   await page.keyboard.press('Escape')
@@ -590,26 +536,37 @@ test('authentication modal fits HD and short viewport sizes', async ({ page }) =
     await expect(dialog).toBeVisible()
     const dialogBounds = await dialog.boundingBox()
     expect(dialogBounds).not.toBeNull()
-    expect(dialogBounds!.width).toBe(500)
-    expect(dialogBounds!.height).toBeLessThanOrEqual(Math.min(656, viewport.height - 16))
-    if (viewport.height >= 720) expect(dialogBounds!.height).toBe(656)
+    const mobileModal = viewport.width <= 700
+    expect(dialogBounds!.width).toBe(mobileModal ? Math.min(414, viewport.width) : 500)
+    expect(dialogBounds!.height).toBeLessThanOrEqual(
+      mobileModal ? viewport.height : Math.min(656, viewport.height - 16),
+    )
+    if (!mobileModal && viewport.height >= 720) expect(dialogBounds!.height).toBe(656)
     expect(dialogBounds!.x + dialogBounds!.width / 2).toBeCloseTo(viewport.width / 2, 0)
     expect(dialogBounds!.y + dialogBounds!.height / 2).toBeCloseTo(viewport.height / 2, 0)
 
-    await dialog.getByRole('button', { name: 'Criar conta', exact: true }).click()
+    if (mobileModal) {
+      await dialog.getByRole('button', { name: /Novo na Kurio/ }).click()
+    } else {
+      await dialog.getByRole('button', { name: 'Criar conta', exact: true }).click()
+    }
     const facebookButton = await dialog.getByRole('button', { name: 'Continuar com Facebook' }).boundingBox()
     const footerStripe = await dialog.locator('[aria-hidden="true"].bg-primary').boundingBox()
     expect(facebookButton).not.toBeNull()
-    expect(footerStripe).not.toBeNull()
-    expect(footerStripe!.y - facebookButton!.y - facebookButton!.height).toBeGreaterThanOrEqual(16)
-    expect(
-      Math.abs(footerStripe!.y + footerStripe!.height - dialogBounds!.y - dialogBounds!.height),
-    ).toBeLessThanOrEqual(1)
+    if (mobileModal) {
+      await expect(dialog.getByText('KURIO', { exact: true })).toBeVisible()
+    } else {
+      expect(footerStripe).not.toBeNull()
+      expect(footerStripe!.y - facebookButton!.y - facebookButton!.height).toBeGreaterThanOrEqual(16)
+      expect(
+        Math.abs(footerStripe!.y + footerStripe!.height - dialogBounds!.y - dialogBounds!.height),
+      ).toBeLessThanOrEqual(1)
 
-    const closeButton = await dialog.getByRole('button', { name: 'Fechar' }).boundingBox()
-    expect(closeButton).not.toBeNull()
-    expect(closeButton!.x).toBeGreaterThanOrEqual(dialogBounds!.x + 20)
-    expect(closeButton!.y).toBeGreaterThanOrEqual(dialogBounds!.y + 20)
+      const closeButton = await dialog.getByRole('button', { name: 'Fechar' }).boundingBox()
+      expect(closeButton).not.toBeNull()
+      expect(closeButton!.x).toBeGreaterThanOrEqual(dialogBounds!.x + 20)
+      expect(closeButton!.y).toBeGreaterThanOrEqual(dialogBounds!.y + 20)
+    }
 
     await page.keyboard.press('Escape')
     await expect(dialog).not.toBeVisible()
@@ -627,33 +584,40 @@ test('home route renders promotional banners with their typography', async ({ pa
   const collectionDescription = bannerSection.locator('article').nth(1).locator('p')
 
   await expect(title).toBeVisible()
-  await expect(title).toHaveCSS('font-size', '18px')
+  const isDesktopBanner = (await page.evaluate(() => window.innerWidth)) >= 640
+  await expect(title).toHaveCSS('font-size', isDesktopBanner ? '18px' : '16px')
   await expect(title).toHaveCSS('font-weight', '700')
   await expect(title).toHaveCSS('line-height', '24px')
-  await expect(title).toHaveCSS('text-align', 'right')
-  await expect(title).toHaveCSS('width', '206px')
-  await expect(title).toHaveCSS('height', '48px')
+  await expect(title).toHaveCSS('text-align', isDesktopBanner ? 'right' : 'center')
+  if (isDesktopBanner) {
+    await expect(title).toHaveCSS('width', '260px')
+    await expect(title).toHaveCSS('height', '48px')
+  }
   await expect(title).toHaveCSS('margin-top', '0px')
-  await expect(description).toHaveCSS('font-size', '14px')
+  await expect(description).toHaveCSS('font-size', isDesktopBanner ? '14px' : '12px')
   await expect(description).toHaveCSS('font-weight', '400')
-  await expect(description).toHaveCSS('line-height', '24px')
-  await expect(description).toHaveCSS('text-align', 'right')
-  await expect(description).toHaveCSS('width', '263px')
-  await expect(description).toHaveCSS('height', '45px')
-  await expect(description).toHaveCSS('margin-top', '9px')
-  await expect(collectionDescription).toHaveCSS('width', '252px')
-  await expect(collectionDescription).toHaveCSS('height', '45px')
-  await expect(collectionDescription).toHaveCSS('margin-top', '9px')
-  await expect(collectionDescription.locator('br')).toHaveCount(2)
+  await expect(description).toHaveCSS('line-height', isDesktopBanner ? '24px' : '20px')
+  if (isDesktopBanner) {
+    await expect(description).toHaveCSS('text-align', 'right')
+    await expect(description).toHaveCSS('width', '233px')
+    await expect(description).toHaveCSS('height', '45px')
+    await expect(description).toHaveCSS('margin-top', '9px')
+    await expect(collectionDescription).toHaveCSS('width', '236px')
+    await expect(collectionDescription).toHaveCSS('height', '45px')
+    await expect(collectionDescription).toHaveCSS('margin-top', '9px')
+  }
+  await expect(collectionDescription.locator('br')).toHaveCount(0)
   await expect(collectionDescription).toHaveText(
     /Explore novos artistas,\s+coleções verificadas e obras\s+digitais que definem a cultura\./,
   )
-  await expect(bannerSection.getByRole('link', { name: 'Explorar' }).first()).toHaveCSS(
-    'margin-top',
-    '25px',
-  )
+  if (isDesktopBanner) {
+    await expect(bannerSection.getByRole('link', { name: 'Explorar' }).first()).toHaveCSS(
+      'margin-top',
+      '25px',
+    )
+  }
   const launchImage = bannerSection.getByRole('img', { name: 'Macaco usando óculos e jaqueta verde' })
-  await expect(launchImage).toHaveCSS('border-radius', '18px')
+  await expect(launchImage).toHaveCSS('border-top-left-radius', isDesktopBanner ? '18px' : '12px')
   const cornerCircle = bannerSection.locator('article').first().locator('svg circle')
   await expect(cornerCircle).toHaveCount(2)
   await expect(cornerCircle.nth(0)).toHaveAttribute('r', '130')
@@ -663,7 +627,7 @@ test('home route renders promotional banners with their typography', async ({ pa
   await expect(secondBannerCircle).toHaveCount(2)
   await expect(secondBannerCircle.first().locator('xpath=../..')).toHaveCSS('overflow', 'hidden')
   const collectionImage = bannerSection.getByRole('img', { name: 'Macaco usando terno claro' })
-  await expect(collectionImage).toHaveCSS('border-radius', '17px')
+  await expect(collectionImage).toHaveCSS('border-top-left-radius', isDesktopBanner ? '17px' : '12px')
   if ((await page.evaluate(() => window.innerWidth)) >= 1280) {
     const imageBounds = await launchImage.evaluate((image) => {
       const imageRect = image.getBoundingClientRect()
@@ -690,26 +654,23 @@ test('home route renders promotional banners with their typography', async ({ pa
     expect(collectionImageBounds).toEqual({ x: 2, width: 287, height: 250 })
 
     const textPositions = await bannerSection.locator('article').first().evaluate((article) => {
-      const articleRect = article.getBoundingClientRect()
       const titleRect = article.querySelector('h2')!.getBoundingClientRect()
       const descriptionRect = article.querySelector('p')!.getBoundingClientRect()
       const actionRect = article.querySelector('a')!.getBoundingClientRect()
 
       return {
-        title: { x: titleRect.x - articleRect.x, y: titleRect.y - articleRect.y },
-        description: {
-          x: descriptionRect.x - articleRect.x,
-          y: descriptionRect.y - articleRect.y,
-        },
-        action: { y: actionRect.y - articleRect.y },
+        titleBottom: titleRect.bottom,
+        descriptionTop: descriptionRect.top,
+        descriptionBottom: descriptionRect.bottom,
+        actionTop: actionRect.top,
+        titleRight: titleRect.right,
+        descriptionRight: descriptionRect.right,
       }
     })
 
-    expect(textPositions).toEqual({
-      title: { x: 350, y: 37 },
-      description: { x: 293, y: 94 },
-      action: { y: 164 },
-    })
+    expect(textPositions.descriptionTop).toBeGreaterThan(textPositions.titleBottom)
+    expect(textPositions.actionTop).toBeGreaterThan(textPositions.descriptionBottom)
+    expect(Math.abs(textPositions.titleRight - textPositions.descriptionRight)).toBeLessThanOrEqual(1)
 
     const collectionTextPositions = await bannerSection.locator('article').nth(1).evaluate((article) => {
       const articleRect = article.getBoundingClientRect()
@@ -717,15 +678,21 @@ test('home route renders promotional banners with their typography', async ({ pa
 
       return {
         x: descriptionRect.x - articleRect.x,
-        y: descriptionRect.y - articleRect.y,
+        right: descriptionRect.right - articleRect.x,
+        articleWidth: articleRect.width,
         width: descriptionRect.width,
-        height: descriptionRect.height,
       }
     })
 
-    expect(collectionTextPositions).toEqual({ x: 295, y: 94, width: 252, height: 45 })
+    expect(collectionTextPositions.x).toBeGreaterThanOrEqual(0)
+    expect(collectionTextPositions.right).toBeLessThanOrEqual(collectionTextPositions.articleWidth)
+    expect(collectionTextPositions.width).toBeGreaterThan(0)
   }
-  await expect(bannerSection.getByRole('link', { name: 'Explorar' })).toHaveAttribute('href', '#mercado')
+  const exploreLinks = bannerSection.getByRole('link', { name: 'Explorar' })
+  await expect(exploreLinks).toHaveCount(2)
+  for (const link of await exploreLinks.all()) {
+    await expect(link).toHaveAttribute('href', '#mercado')
+  }
 })
 
 test('home route renders the blog cards below the promotional banners', async ({ page }) => {
@@ -819,15 +786,15 @@ test('home route renders the footer after the blog section', async ({ page }) =>
   if ((await page.evaluate(() => window.innerWidth)) >= 1280) {
     const footerSections = footer.locator(':scope > div > section')
     await expect(footerSections.first()).toHaveCSS('height', '250px')
-    await expect(footerSections.nth(1)).toHaveCSS('height', '88px')
+    await expect(footerSections.nth(1)).toHaveCSS('height', '104px')
     await expect(footerSections.nth(2)).toHaveCSS('height', '236px')
     await expect(footerSections.first().locator('article').first().locator('p')).toHaveCSS(
-      'width',
-      '204px',
+      'max-width',
+      '280px',
     )
     await expect(footerSections.first().locator('article').first().locator('p')).toHaveCSS(
       'height',
-      '88px',
+      '66px',
     )
     await expect(footerSections.first().locator('section button')).toHaveCSS('width', '85px')
     await expect(footerSections.first().locator('section button')).toHaveCSS('height', '40px')

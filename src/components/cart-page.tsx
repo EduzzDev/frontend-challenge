@@ -1,11 +1,15 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
+import { getQuote } from '@/api/orders'
 import { HomeFooter } from '@/components/home-footer'
 import { HomeHeader } from '@/components/home-header'
-import { getCartItems, saveCartItems, type CartItem } from '@/lib/cart'
+import type { CartItem } from '@/types/domain'
+import { fromUnits, toUnits } from '@/lib/money'
+import { useCart, useCurrentUserKey } from '@/hooks/use-cart'
 import { nfts } from '@/lib/nfts'
 
-const NETWORK_FEE = 0.016
+const NETWORK_FEE = '0.016'
 const recommendationIds = [
   ['Cosmic Bloom', '118'],
   ['Violet Nomad', '314'],
@@ -20,22 +24,29 @@ const recommendations = recommendationIds.map(([name, number]) => {
   return nft
 })
 
-function getSubtotal(items: CartItem[]) {
-  return items.reduce((total, item) => total + Number(item.nft.price) * item.quantity, 0)
-}
-
 export function CartPage() {
   const navigate = useNavigate()
-  const [items, setItems] = useState(getCartItems)
+  const { cart, isPending, updateItems: saveItems } = useCart()
+  const items = cart?.items ?? []
+  const userId = useCurrentUserKey()
   const [promoCode, setPromoCode] = useState('')
   const [promoApplied, setPromoApplied] = useState(false)
-  const subtotal = getSubtotal(items)
-  const discount = promoApplied ? subtotal * 0.1 : 0
-  const total = subtotal - discount + (items.length > 0 ? NETWORK_FEE : 0)
+  const [couponRemoved, setCouponRemoved] = useState(false)
+  const activeCoupon = promoApplied ? promoCode.trim().toUpperCase() : couponRemoved ? undefined : cart?.coupon?.code
+  const quote = useQuery({
+    queryKey: ['quote', userId, activeCoupon ?? ''],
+    queryFn: () => getQuote(activeCoupon),
+    enabled: items.length > 0,
+  })
+  const subtotalUnits = items.reduce((total, item) => total + toUnits(item.nft.price) * BigInt(item.quantity), 0n)
+  const discountUnits = 0n
+  const feeUnits = items.length ? toUnits(NETWORK_FEE) : 0n
+  const subtotal = quote.data ? fromUnits(toUnits(quote.data.subtotal), 2) : fromUnits(subtotalUnits, 2)
+  const discount = quote.data ? fromUnits(toUnits(quote.data.discount), 2) : fromUnits(discountUnits, 2)
+  const total = quote.data ? fromUnits(toUnits(quote.data.total), 3) : fromUnits(subtotalUnits - discountUnits + feeUnits, 3)
 
   function updateItems(nextItems: CartItem[]) {
-    setItems(nextItems)
-    saveCartItems(nextItems)
+    saveItems(nextItems)
   }
 
   function changeQuantity(index: number, difference: number) {
@@ -49,7 +60,14 @@ export function CartPage() {
   }
 
   function applyPromoCode() {
-    setPromoApplied(promoCode.trim().length > 0)
+    if (promoApplied || (cart?.coupon && !couponRemoved)) {
+      setPromoApplied(false)
+      setCouponRemoved(true)
+      setPromoCode('')
+    } else {
+      setCouponRemoved(false)
+      setPromoApplied(promoCode.trim().length > 0)
+    }
   }
 
   return (
@@ -73,7 +91,9 @@ export function CartPage() {
               <span className="w-[49px] max-md:hidden">Total</span>
               <span aria-hidden="true" />
             </div>
-            {items.length === 0 ? (
+            {isPending ? (
+              <p aria-live="polite" className="py-10 font-mono text-sm text-text-secondary">Carregando seu carrinho…</p>
+            ) : items.length === 0 ? (
               <p className="py-10 font-mono text-sm text-text-secondary">
                 Seu carrinho está vazio. <a className="text-primary hover:underline" href="/#mercado">Continue explorando</a>
               </p>
@@ -193,32 +213,33 @@ export function CartPage() {
                 id="promo-code"
                 onChange={(event) => setPromoCode(event.target.value)}
                 placeholder="Digite o código promocional..."
-                value={promoCode}
+                value={promoCode || (!couponRemoved ? cart?.coupon?.code ?? '' : '')}
               />
               <button
                 className="rounded-r-sm bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary-dark max-md:h-full max-md:rounded-full max-md:px-5"
                 onClick={applyPromoCode}
                 type="button"
               >
-                Aplicar
+                {activeCoupon ? 'Remover' : 'Aplicar'}
               </button>
             </div>
-            {promoApplied && <p className="mt-2 text-xs text-primary">Desconto de 10% aplicado.</p>}
+            {quote.error && <p className="mt-2 text-xs text-primary" role="alert">{quote.error.message}</p>}
+            {quote.data?.discount !== '0.00000000' && quote.data && <p className="mt-2 text-xs text-primary">Desconto de {activeCoupon} aplicado.</p>}
             <dl className="mt-6 space-y-3 max-md:mt-3">
               <div className="flex h-5 items-center justify-between gap-3">
                 <dt className="text-[15px] font-normal leading-[15px]">Subtotal</dt>
-                <dd className="w-[98px] text-right text-lg font-normal leading-4 max-md:text-base max-md:leading-5">{subtotal.toFixed(2)} ETH</dd>
+                <dd className="w-[98px] text-right text-lg font-normal leading-4 max-md:text-base max-md:leading-5">{subtotal} ETH</dd>
               </div>
               <div className="flex h-5 items-center justify-between gap-3">
                 <dt className="text-[15px] font-normal leading-[15px]">Desconto do lançamento</dt>
                 <dd className="w-[98px] whitespace-nowrap text-right text-lg font-normal leading-4 max-md:text-base max-md:leading-5">
-                  (−) {discount.toFixed(2)}
+                  (−) {discount} ETH
                 </dd>
               </div>
               <div className="flex h-5 items-center justify-between gap-3">
                 <dt className="text-[15px] font-normal leading-[15px]">Taxa de rede</dt>
                 <dd className="w-[98px] text-right text-lg font-normal leading-4 max-md:text-base max-md:leading-5">
-                  {items.length ? NETWORK_FEE.toFixed(3) : '0.000'} ETH
+                  {fromUnits(feeUnits, 3)} ETH
                 </dd>
               </div>
               <div className="flex justify-end max-md:-mt-2">
@@ -226,7 +247,7 @@ export function CartPage() {
               </div>
               <div className="flex items-center justify-between gap-3 pt-3">
                 <dt className="text-[15px] font-bold leading-4">Total</dt>
-                <dd className="w-[109px] text-right text-lg font-bold leading-4 text-primary max-md:text-lg max-md:leading-5">{total.toFixed(3)} ETH</dd>
+                <dd className="w-[109px] text-right text-lg font-bold leading-4 text-primary max-md:text-lg max-md:leading-5">{total} ETH</dd>
               </div>
             </dl>
             <button

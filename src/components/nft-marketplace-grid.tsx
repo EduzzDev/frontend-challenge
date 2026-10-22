@@ -1,50 +1,33 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { ChevronRight } from 'lucide-react'
-import { nfts, type Nft } from '@/lib/nfts'
+import type { Nft } from '@/lib/nfts'
 
 const filters = ['Todos os NFTs', 'Novos lançamentos', 'Em alta']
-const PAGE_SIZE = 9
-
 type NftMarketplaceGridProps = {
-  selectedCollection: string | null
-  selectedNetwork: string | null
-  priceRange: [number, number]
-  searchQuery: string
+  items: Nft[]
+  isLoading: boolean
+  error: Error | null
+  onRetry: () => void
+  page: number
+  onPageChange: (page: number) => void
+  sortOrder: string
+  onSortChange: (sortOrder: string) => void
+  total: number
 }
 
 export function NftMarketplaceGrid({
-  selectedCollection,
-  selectedNetwork,
-  priceRange,
-  searchQuery,
+  items,
+  isLoading,
+  error,
+  onRetry,
+  page,
+  onPageChange,
+  sortOrder,
+  onSortChange,
+  total,
 }: NftMarketplaceGridProps) {
   const [activeFilter, setActiveFilter] = useState(filters[0])
-  const [currentPage, setCurrentPage] = useState(1)
-  const [sortOrder, setSortOrder] = useState('recent')
-
-  const filteredNfts = nfts.filter((nft) => {
-    const priceInCents = Number(nft.price) * 100
-    return (
-      (!selectedCollection || nft.collection === selectedCollection) &&
-      (!selectedNetwork || nft.network === selectedNetwork) &&
-      (!searchQuery.trim() ||
-        `${nft.name} ${nft.number}`.toLowerCase().includes(searchQuery.trim().toLowerCase())) &&
-      priceInCents >= priceRange[0] &&
-      priceInCents <= priceRange[1]
-    )
-  })
-
-  const sortedNfts = [...filteredNfts].sort((left, right) => {
-    if (sortOrder === 'price-low') return Number(left.price) - Number(right.price)
-    if (sortOrder === 'price-high') return Number(right.price) - Number(left.price)
-    return 0
-  })
-  const pageCount = Math.max(1, Math.ceil(sortedNfts.length / PAGE_SIZE))
-  const visibleNfts = sortedNfts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [selectedCollection, selectedNetwork, priceRange])
+  const pageCount = Math.max(1, Math.ceil(total / 9))
 
   function getNftHref(nft: Nft) {
     return `/nft/${nft.name.toLowerCase().replaceAll(' ', '-')}-${nft.number}`
@@ -80,7 +63,7 @@ export function NftMarketplaceGrid({
           <select
             aria-label="Ordenar NFTs"
             className="h-10 rounded-md  border-0 bg-[#140D0A] px-3 font-mono text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            onChange={(event) => setSortOrder(event.target.value)}
+            onChange={(event) => onSortChange(event.target.value)}
             value={sortOrder}
           >
             <option value="recent">Listados recentemente</option>
@@ -90,8 +73,20 @@ export function NftMarketplaceGrid({
         </label>
       </div>
 
-      <ul className="grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 max-md:grid-cols-2 max-md:gap-x-3 max-md:gap-y-4">
-        {visibleNfts.map((nft) => (
+      {error && (
+        <div className="rounded-lg border border-border p-6 text-center font-mono text-sm text-text-secondary" role="alert">
+          <p>{error.message || 'Não foi possível carregar os NFTs.'}</p>
+          <button className="mt-3 rounded-md bg-primary px-4 py-2 font-bold text-primary-foreground" onClick={onRetry} type="button">Tentar novamente</button>
+        </div>
+      )}
+      <ul aria-busy={isLoading} className="grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 max-md:grid-cols-2 max-md:gap-x-3 max-md:gap-y-4">
+        {isLoading ? Array.from({ length: 6 }, (_, index) => (
+          <li aria-label="Carregando NFT" className="animate-pulse" key={`skeleton-${index}`}>
+            <div className="aspect-square w-full rounded-xl bg-surface-card" />
+            <div className="mt-3 h-4 w-3/4 rounded bg-surface-card" />
+            <div className="mt-2 h-4 w-1/3 rounded bg-surface-card" />
+          </li>
+        )) : items.map((nft) => (
           <li
             className={`min-w-0 max-md:[order:var(--mobile-order)]`}
             key={`${nft.name}-${nft.number}`}
@@ -135,7 +130,7 @@ export function NftMarketplaceGrid({
         ))}
       </ul>
 
-      {visibleNfts.length === 0 && (
+      {!isLoading && !error && items.length === 0 && (
         <p className="py-8 text-center font-mono text-sm text-text-secondary">
           Nenhum NFT encontrado com os filtros selecionados.
         </p>
@@ -143,27 +138,27 @@ export function NftMarketplaceGrid({
 
       <nav aria-label="Paginação dos NFTs" className="mt-auto flex justify-end pt-8">
         <div className="flex gap-2.5">
-          {Array.from({ length: pageCount }, (_, index) => index + 1).map((page) => (
+          {Array.from({ length: pageCount }, (_, index) => index + 1).map((pageNumber) => (
             <button
-              aria-current={currentPage === page ? 'page' : undefined}
-              aria-label={`Página ${page}`}
+              aria-current={page === pageNumber ? 'page' : undefined}
+              aria-label={`Página ${pageNumber}`}
               className={`size-8.75 rounded-sm border border-border font-mono text-base transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                currentPage === page
+                page === pageNumber
                   ? 'border-primary bg-primary font-bold text-primary-foreground'
                   : 'text-foreground hover:border-primary hover:text-primary'
               }`}
-              key={page}
-              onClick={() => setCurrentPage(page)}
+              key={pageNumber}
+              onClick={() => onPageChange(pageNumber)}
               type="button"
             >
-              {page}
+              {pageNumber}
             </button>
           ))}
           <button
             aria-label="Próxima página"
             className="flex size-8.75 items-center justify-center rounded-sm border border-border text-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={currentPage === pageCount}
-            onClick={() => setCurrentPage((page) => Math.min(page + 1, pageCount))}
+            disabled={page === pageCount}
+            onClick={() => onPageChange(Math.min(page + 1, pageCount))}
             type="button"
           >
             <ChevronRight aria-hidden="true" size={18} />

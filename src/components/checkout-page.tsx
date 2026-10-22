@@ -1,9 +1,14 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { createOrder, getOrder, getQuote } from '@/api/orders'
 import { HomeFooter } from '@/components/home-footer'
 import { HomeHeader } from '@/components/home-header'
-import { getCartItems } from '@/lib/cart'
+import { useCart, useCurrentUserKey } from '@/hooks/use-cart'
+import { useSession } from '@/hooks/use-session'
+import { fromUnits, toUnits } from '@/lib/money'
+import type { Order } from '@/types/domain'
+import { createId } from '@/lib/id'
 
-const NETWORK_FEE = 0.016
 const inputClassName =
   'h-10 w-full max-w-[420px] rounded-[3px] border border-border bg-transparent px-3 font-mono text-sm leading-4 text-foreground outline-none placeholder:text-secondary focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary'
 const labelClassName = 'mb-1 block font-mono text-[15px] font-normal leading-[15px] text-foreground'
@@ -43,30 +48,191 @@ function ThankYouIcon() {
   )
 }
 
+type ReceiptData = { date: string; network: string; wallet: string; order: Order }
+
+function PurchaseReceipt({ receipt }: { receipt: ReceiptData }) {
+  const { order } = receipt
+  const total = fromUnits(toUnits(order.quote.total), 3)
+  const networkFee = fromUnits(toUnits(order.quote.networkFee), 3)
+
+  return (
+    <section
+      aria-labelledby="purchase-confirmation-title"
+      aria-live="polite"
+      className="mx-auto mt-6 w-full max-w-[578px] overflow-hidden bg-surface-card font-mono max-md:mt-3 max-md:rounded-2xl"
+    >
+      <div className="relative flex flex-col items-center border-b border-primary px-5 pb-3 pt-4 text-center">
+        <a aria-label="Fechar confirmação" className="absolute right-4 top-3 text-primary hover:text-foreground" href="/#mercado">
+          <svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16">
+            <path d="m4 4 8 8m0-8-8 8" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
+          </svg>
+        </a>
+        <ThankYouIcon />
+        <h1 className="mt-2 text-[15px] font-bold leading-4 text-text-secondary md:text-base md:leading-5" id="purchase-confirmation-title">
+          Seus NFTs foram adicionados ao pedido
+        </h1>
+      </div>
+
+      <dl aria-label="Dados do pedido" className="grid grid-cols-2 divide-x divide-y divide-border border-b border-primary sm:grid-cols-4 sm:divide-y-0">
+        <div className="min-w-0 px-3 py-3 sm:px-3 sm:py-2">
+          <dt className="text-xs font-bold leading-4 text-text-secondary md:text-sm">ID da transação</dt>
+          <dd className="mt-0.5 truncate font-mono text-sm leading-5 text-text-secondary md:text-[15px] md:leading-[15px]">{order.transaction.id}</dd>
+        </div>
+        <div className="min-w-0 px-3 py-3 sm:px-3 sm:py-2">
+          <dt className="text-xs leading-4 text-text-secondary md:text-sm">Data</dt>
+          <dd className="mt-0.5 whitespace-nowrap font-mono text-sm leading-5 text-text-secondary md:text-[15px] md:leading-[15px]">{receipt.date}</dd>
+        </div>
+        <div className="min-w-0 px-3 py-3 sm:px-3 sm:py-2">
+          <dt className="text-xs leading-4 text-text-secondary md:text-sm">Total</dt>
+          <dd className="mt-0.5 whitespace-nowrap font-mono text-sm leading-5 text-text-secondary md:text-[15px] md:leading-[15px]">{total} ETH</dd>
+        </div>
+        <div className="min-w-0 px-3 py-3 sm:px-3 sm:py-2">
+          <dt className="text-xs leading-4 text-text-secondary md:text-sm">Carteira</dt>
+          <dd className="mt-0.5 truncate font-mono text-sm leading-5 text-text-secondary md:text-[15px] md:leading-[15px]">{receipt.wallet}</dd>
+        </div>
+      </dl>
+
+      <div className="px-4 py-5 sm:px-10 sm:py-4">
+        <h2 className="text-base font-bold leading-5 text-foreground md:text-[15px] md:leading-4">Detalhes da transação</h2>
+        <div className="mt-3 grid grid-cols-[minmax(0,1fr)_68px_77px] items-center border-b border-border pb-2 text-base font-bold leading-4 text-foreground max-md:hidden md:grid-cols-[minmax(0,1fr)_68px_68px_77px]">
+          <span>NFTs</span><span className="w-[68px] text-center">Edições</span><span aria-hidden="true" /><span className="w-[77px] text-right">Subtotal</span>
+        </div>
+        <ul aria-label="NFTs do pedido" className="mt-1 divide-y divide-border max-md:hidden">
+          {order.items.map((item) => (
+            <li className="grid min-w-0 grid-cols-[minmax(0,1fr)_68px_77px] items-center py-2 md:grid-cols-[minmax(0,1fr)_68px_68px_77px]" key={item.nft.id}>
+              <div className="flex min-w-0 items-center gap-2">
+                <img alt={`NFT ${item.nft.name} #${item.nft.number}`} className="size-[70px] shrink-0 rounded-md object-cover" height="70" src={item.nft.image} width="70" />
+                <div className="min-w-0"><h3 className="truncate text-base font-bold leading-4 text-foreground">{item.nft.name} #{item.nft.number}</h3><p className="truncate text-sm leading-4 text-secondary">ID do token: #{item.nft.number.padStart(4, '0')}</p></div>
+              </div>
+              <span className="w-[68px] text-center text-[15px] text-text-secondary">(x {item.quantity})</span>
+              <span aria-hidden="true" />
+              <span className="w-[77px] whitespace-nowrap text-right text-base font-bold leading-4 text-primary">{fromUnits(toUnits(item.subtotal), 2)} ETH</span>
+            </li>
+          ))}
+        </ul>
+        <ul aria-label="NFTs do pedido" className="hidden flex-col divide-y divide-border max-md:flex">
+          {order.items.map((item) => (
+            <li className="grid grid-cols-[56px_minmax(0,1fr)] gap-x-3 py-3" key={item.nft.id}>
+              <img alt={`NFT ${item.nft.name} #${item.nft.number}`} className="row-span-2 size-14 rounded-lg object-cover" height="56" src={item.nft.image} width="56" />
+              <div className="min-w-0 self-center"><h3 className="truncate text-sm font-bold leading-5 text-foreground">{item.nft.name} #{item.nft.number}</h3><p className="truncate text-xs leading-4 text-secondary">ID do token: #{item.nft.number.padStart(4, '0')}</p></div>
+              <div className="flex min-w-0 items-center justify-between gap-2"><span className="text-xs leading-4 text-text-secondary">Edições (x {item.quantity})</span><span className="shrink-0 text-sm font-bold leading-5 text-primary">{fromUnits(toUnits(item.subtotal), 2)} ETH</span></div>
+            </li>
+          ))}
+        </ul>
+
+        <dl className="mt-3 space-y-1 border-t border-border pt-2 text-sm leading-4">
+          <div className="flex items-center justify-between"><dt className="font-mono text-[15px] leading-5 text-foreground">Taxa de rede</dt><dd className="font-mono text-[15px] leading-5 text-foreground">{networkFee} ETH</dd></div>
+          <div className="flex items-center justify-between font-bold"><dt className="font-mono text-base leading-4 text-foreground">Total</dt><dd className="font-mono text-base leading-4 text-primary">{total} ETH</dd></div>
+        </dl>
+        <p className="mt-3 min-h-[66px] border-t border-border pt-3 text-center font-mono text-sm leading-[22px] text-text-secondary">
+          Prévia demonstrativa na rede {receipt.network}. Nenhuma transação real foi enviada e nenhum NFT foi transferido.
+        </p>
+        <button className="mx-auto mt-4 flex h-10 w-[154px] items-center justify-center rounded-md bg-primary font-mono text-base font-bold leading-4 text-[#140D0A]" disabled title="A transação demonstrativa não possui link no Etherscan." type="button">
+          Ver no Etherscan
+        </button>
+      </div>
+      <div aria-hidden="true" className="h-1.5 bg-primary" />
+    </section>
+  )
+}
+
 export function CheckoutPage() {
-  const items = getCartItems()
+  const { cart, isPending: cartPending } = useCart()
+  const { session, isLoading: sessionLoading } = useSession()
+  const hasSessionToken = Boolean(window.localStorage.getItem('kurio-session-token'))
+  const items = cart?.items ?? []
+  const userId = useCurrentUserKey()
+  const queryClient = useQueryClient()
   const [wallet, setWallet] = useState('coinbase')
   const [activeAccount, setActiveAccount] = useState<'reserve' | 'main'>('reserve')
   const [useSecondaryWallet, setUseSecondaryWallet] = useState(false)
   const [showPromoInput, setShowPromoInput] = useState(false)
   const [promoCode, setPromoCode] = useState('')
   const [promoApplied, setPromoApplied] = useState(false)
+  const [couponRemoved, setCouponRemoved] = useState(false)
+  const activeCoupon = promoApplied ? promoCode.trim().toUpperCase() : couponRemoved ? undefined : cart?.coupon?.code
   const [purchaseConfirmed, setPurchaseConfirmed] = useState(false)
-  const [receipt, setReceipt] = useState<{ date: string; network: string; wallet: string } | null>(null)
-  const subtotal = items.reduce((total, item) => total + Number(item.nft.price) * item.quantity, 0)
-  const discount = promoApplied ? subtotal * 0.1 : 0
-  const fee = items.length > 0 ? NETWORK_FEE : 0
-  const total = subtotal - discount + fee
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null)
+  const [purchaseError, setPurchaseError] = useState('')
+  const quoteQuery = useQuery({
+    queryKey: ['quote', userId, activeCoupon ?? ''],
+    queryFn: () => getQuote(activeCoupon),
+    enabled: items.length > 0,
+  })
+  const lastOrderId = window.localStorage.getItem('kurio-last-order-id')
+  const savedOrderQuery = useQuery({
+    queryKey: ['order', lastOrderId],
+    queryFn: () => getOrder(lastOrderId!),
+    enabled: !items.length && Boolean(lastOrderId && hasSessionToken),
+  })
+  const quote = quoteQuery.data
+  const subtotal = quote?.subtotal ?? '0.00'
+  const discount = quote?.discount ?? '0.00'
+  const fee = quote?.networkFee ?? '0.000'
+  const total = quote?.total ?? '0.00'
+  const orderMutation = useMutation({
+    mutationFn: (input: { walletId: string; quoteVersion: string; idempotencyKey: string }) =>
+      createOrder({ walletId: input.walletId, quoteVersion: input.quoteVersion, coupon: activeCoupon }, input.idempotencyKey),
+    onSuccess: (order) => {
+      queryClient.setQueryData(['order', order.id], order)
+      void queryClient.invalidateQueries({ queryKey: ['cart', userId] })
+      void queryClient.invalidateQueries({ queryKey: ['orders', userId] })
+    },
+  })
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  useEffect(() => {
+    const order = savedOrderQuery.data
+    if (order?.status === 'confirmed') {
+      setReceipt({
+        date: new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(order.createdAt)),
+        network: order.transaction.network,
+        wallet: order.transaction.walletId,
+        order,
+      })
+      setPurchaseConfirmed(true)
+    }
+  }, [savedOrderQuery.data])
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const formData = new FormData(event.currentTarget)
-    setReceipt({
-      date: new Intl.DateTimeFormat('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date()),
-      network: String(formData.get('network')),
-      wallet: wallet === 'metamask' ? 'MetaMask' : wallet === 'coinbase' ? 'Coinbase' : 'WalletConnect',
-    })
-    setPurchaseConfirmed(true)
+    if (orderMutation.isPending || !items.length) return
+    setPurchaseError('')
+    const pendingAttempt = window.localStorage.getItem('kurio-pending-order-attempt')
+    let attempt: { idempotencyKey: string; walletId: string; quoteVersion: string }
+    if (pendingAttempt) {
+      try { attempt = JSON.parse(pendingAttempt) as typeof attempt } catch { window.localStorage.removeItem('kurio-pending-order-attempt'); return }
+    } else {
+      const latestQuote = await quoteQuery.refetch()
+      if (!latestQuote.data) {
+        setPurchaseError(latestQuote.error instanceof Error ? latestQuote.error.message : 'Não foi possível validar a cotação.')
+        return
+      }
+      attempt = {
+        idempotencyKey: createId(),
+        walletId: `${userId}-wallet-${wallet === 'metamask' ? 'reserve' : 'main'}`,
+        quoteVersion: latestQuote.data.version,
+      }
+      window.localStorage.setItem('kurio-pending-order-attempt', JSON.stringify(attempt))
+    }
+    try {
+      const order = await orderMutation.mutateAsync(attempt)
+      if (order.status !== 'confirmed') {
+        setPurchaseError('O pagamento foi recusado. Seus itens continuam no carrinho.')
+        window.localStorage.removeItem('kurio-pending-order-attempt')
+        return
+      }
+      window.localStorage.removeItem('kurio-pending-order-attempt')
+      window.localStorage.setItem('kurio-last-order-id', order.id)
+      setReceipt({
+        date: new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(order.createdAt)),
+        network: order.transaction.network,
+        wallet: wallet === 'metamask' ? 'MetaMask' : wallet === 'coinbase' ? 'Coinbase Wallet' : 'WalletConnect',
+        order,
+      })
+      setPurchaseConfirmed(true)
+    } catch (error) {
+      setPurchaseError(error instanceof Error ? error.message : 'Não foi possível confirmar o pedido. Tente novamente.')
+    }
   }
 
   return (
@@ -81,136 +247,30 @@ export function CheckoutPage() {
           <span aria-current="page">Pagamento</span>
         </nav>
 
-        {items.length === 0 ? (
+        {!hasSessionToken ? (
+          <section className="mx-auto max-w-2xl rounded-xl bg-card p-8 font-mono">
+            <h1 className="text-xl font-bold">Entre para continuar com o pagamento</h1>
+            <p className="mt-3 text-sm text-text-secondary">Abra Entrar no cabeçalho para autenticar; os itens do carrinho serão preservados.</p>
+          </section>
+        ) : sessionLoading ? (
+          <p aria-live="polite" className="py-12 font-mono text-sm text-text-secondary">Validando sessão…</p>
+        ) : !session ? (
+          <section className="mx-auto max-w-2xl rounded-xl bg-card p-8 font-mono"><h1 className="text-xl font-bold">Sua sessão expirou</h1><p className="mt-3 text-sm text-text-secondary">Entre novamente para continuar. Seus itens continuam salvos no carrinho.</p></section>
+        ) : purchaseConfirmed && receipt ? (
+          <PurchaseReceipt receipt={receipt} />
+        ) : cartPending ? (
+          <p aria-live="polite" className="py-12 font-mono text-sm text-text-secondary">Carregando carrinho e cotação…</p>
+        ) : items.length === 0 ? (
           <section className="py-12 font-mono">
             <h1 className="text-lg font-bold text-foreground">Seu carrinho está vazio</h1>
             <a className="mt-3 inline-block text-[15px] text-primary hover:underline" href="/#mercado">
               Voltar ao mercado
             </a>
           </section>
-        ) : purchaseConfirmed && receipt ? (
-          <section
-            aria-labelledby="purchase-confirmation-title"
-            aria-live="polite"
-            className="mx-auto mt-6 w-full max-w-[578px] overflow-hidden bg-surface-card font-mono max-md:mt-3 max-md:rounded-2xl"
-          >
-            <div className="relative flex flex-col items-center border-b border-primary px-5 pb-3 pt-4 text-center">
-              <a
-                aria-label="Fechar confirmação"
-                className="absolute right-4 top-3 text-primary hover:text-foreground"
-                href="/#mercado"
-              >
-                <svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16">
-                  <path d="m4 4 8 8m0-8-8 8" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
-                </svg>
-              </a>
-              <ThankYouIcon />
-              <h1 className="mt-2 text-[15px] font-bold leading-4 text-text-secondary" id="purchase-confirmation-title">
-                Seus NFTs foram adicionados ao pedido
-              </h1>
-            </div>
-
-            <dl aria-label="Dados do pedido" className="grid grid-cols-2 divide-x divide-y divide-border border-b border-primary sm:grid-cols-4 sm:divide-y-0">
-              <div className="min-w-0 px-2 py-2 text-center sm:px-3 max-md:px-3 max-md:py-3">
-                <dt className="text-sm font-bold leading-4 text-text-secondary max-md:text-xs">ID da transação</dt>
-                <dd className="mt-0.5 truncate font-mono text-[15px] font-normal leading-[15px] text-text-secondary max-md:text-sm max-md:leading-5">0xA91F...E82C</dd>
-              </div>
-              <div className="min-w-0 px-2 py-2 sm:px-3 max-md:px-3 max-md:py-3">
-                <dt className="text-sm font-bold leading-4 text-text-secondary max-md:text-xs">Data</dt>
-                <dd className="mt-0.5 whitespace-nowrap font-mono text-[15px] font-normal leading-[15px] text-text-secondary max-md:text-sm max-md:leading-5">{receipt.date}</dd>
-              </div>
-              <div className="min-w-0 px-2 py-2 sm:px-3 max-md:px-3 max-md:py-3">
-                <dt className="text-sm font-bold leading-4 text-text-secondary max-md:text-xs">Total</dt>
-                <dd className="mt-0.5 whitespace-nowrap font-mono text-[15px] font-normal leading-[15px] text-text-secondary max-md:text-sm max-md:leading-5">{total.toFixed(3)} ETH</dd>
-              </div>
-              <div className="min-w-0 px-2 py-2 sm:px-3 max-md:px-3 max-md:py-3">
-                <dt className="text-sm font-bold leading-4 text-text-secondary max-md:text-xs">Carteira</dt>
-                <dd className="mt-0.5 truncate font-mono text-[15px] font-normal leading-[15px] text-text-secondary max-md:text-sm max-md:leading-5">{receipt.wallet}</dd>
-              </div>
-            </dl>
-
-            <div className="px-5 py-4 sm:px-10 max-md:px-4 max-md:py-5">
-              <h2 className="text-[15px] font-bold leading-4 text-foreground max-md:text-base max-md:leading-5">Detalhes da transação</h2>
-              <div className="mt-3 grid grid-cols-[minmax(0,1fr)_68px_77px] items-center border-b border-border pb-2 text-base font-bold leading-4 text-foreground max-md:hidden sm:grid-cols-[minmax(0,1fr)_68px_68px_77px]">
-                <span>NFTs</span>
-                <span className="w-[68px] text-center">Edições</span>
-                <span aria-hidden="true" className="hidden sm:block" />
-                <span className="w-[77px] text-right">Subtotal</span>
-              </div>
-              <ul aria-label="NFTs do pedido" className="divide-y divide-border max-md:hidden">
-                {items.map(({ nft, quantity }) => (
-                  <li className="grid min-w-0 grid-cols-[minmax(0,1fr)_68px_77px] items-center py-2 sm:grid-cols-[minmax(0,1fr)_68px_68px_77px]" key={`${nft.name}-${nft.number}`}>
-                    <div className="flex min-w-0 items-center gap-2">
-                      <img
-                        alt={`NFT ${nft.name} #${nft.number}`}
-                        className="size-[70px] shrink-0 rounded-md object-cover"
-                        height="70"
-                        src={nft.image}
-                        width="70"
-                      />
-                      <div className="min-w-0">
-                        <h3 className="truncate text-base font-bold leading-4 text-foreground">{nft.name} #{nft.number}</h3>
-                        <p className="truncate text-sm font-normal leading-4 text-secondary">ID do token: #{nft.number.padStart(4, '0')}</p>
-                      </div>
-                    </div>
-                    <span className="w-[68px] text-center text-[15px] font-normal leading-5 text-text-secondary">(x {quantity})</span>
-                    <span aria-hidden="true" className="hidden sm:block" />
-                    <span className="w-[77px] whitespace-nowrap text-right text-base font-bold leading-4 text-primary">
-                      {(Number(nft.price) * quantity).toFixed(2)} ETH
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
-              <ul aria-label="NFTs do pedido" className="hidden max-md:flex max-md:flex-col max-md:divide-y max-md:divide-border">
-                {items.map(({ nft, quantity }) => (
-                  <li className="grid grid-cols-[56px_minmax(0,1fr)] gap-x-3 py-3" key={`${nft.name}-${nft.number}`}>
-                    <img
-                      alt={`NFT ${nft.name} #${nft.number}`}
-                      className="row-span-2 size-14 rounded-lg object-cover"
-                      height="56"
-                      src={nft.image}
-                      width="56"
-                    />
-                    <div className="min-w-0 self-center">
-                      <h3 className="truncate text-sm font-bold leading-5 text-foreground">{nft.name} #{nft.number}</h3>
-                      <p className="truncate text-xs leading-4 text-secondary">ID do token: #{nft.number.padStart(4, '0')}</p>
-                    </div>
-                    <div className="flex min-w-0 items-center justify-between gap-2">
-                      <span className="text-xs leading-4 text-text-secondary">Edições (x {quantity})</span>
-                      <span className="shrink-0 text-sm font-bold leading-5 text-primary">{(Number(nft.price) * quantity).toFixed(2)} ETH</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-
-              <dl className="mt-3 space-y-1 border-t border-border pt-2 text-sm leading-4">
-                <div className="flex items-center justify-between">
-                  <dt className="font-mono text-[15px] font-normal leading-5 text-foreground">Taxa de rede</dt>
-                  <dd className="font-mono text-[15px] font-normal leading-5 text-foreground">{fee.toFixed(3)} ETH</dd>
-                </div>
-                <div className="flex items-center justify-between font-bold">
-                  <dt className="font-mono text-base font-bold leading-4 text-foreground">Total</dt>
-                  <dd className="font-mono text-base font-bold leading-4 text-primary">{total.toFixed(3)} ETH</dd>
-                </div>
-              </dl>
-              <p className="mt-3 min-h-[66px] border-t border-border pt-3 text-center font-mono text-sm font-normal leading-[22px] text-text-secondary">
-                Prévia demonstrativa na rede {receipt.network}. Nenhuma transação real foi enviada e nenhum NFT foi transferido.
-              </p>
-              <button
-                className="mx-auto mt-4 flex h-10 w-[154px] items-center justify-center rounded-md bg-primary font-mono text-base font-bold leading-4 text-[#140D0A]"
-                disabled
-                title="A transação demonstrativa não possui link no Etherscan."
-                type="button"
-              >
-                Ver no Etherscan
-              </button>
-            </div>
-            <div aria-hidden="true" className="h-1.5 bg-primary" />
-          </section>
         ) : (
           <>
           <form className="grid items-start gap-8 font-mono lg:grid-cols-[minmax(0,1.9fr)_minmax(340px,1fr)] max-md:hidden" onSubmit={handleSubmit}>
+            {(purchaseError || quoteQuery.error) && <p className="col-span-full" role="alert">{purchaseError || (quoteQuery.error instanceof Error ? quoteQuery.error.message : 'Falha na cotação.')}</p>}
             <section aria-labelledby="collector-profile-title">
               <h1 className="mb-3 text-[17px] font-bold leading-5 text-foreground" id="collector-profile-title">
                 Perfil do colecionador
@@ -312,7 +372,7 @@ export function CheckoutPage() {
                     </div>
                     <span className="shrink-0 text-[17px] font-normal leading-6 text-secondary">(x {quantity})</span>
                     <span className="shrink-0 text-base font-bold leading-4 text-primary">
-                      {(Number(nft.price) * quantity).toFixed(2)} ETH
+                      {fromUnits(toUnits(nft.price) * BigInt(quantity), 2)} ETH
                     </span>
                   </li>
                 ))}
@@ -332,33 +392,37 @@ export function CheckoutPage() {
                       aria-label="Código promocional"
                       className={`${inputClassName} min-w-0 rounded-r-none`}
                       onChange={(event) => setPromoCode(event.target.value)}
-                      value={promoCode}
+                      value={promoCode || cart?.coupon?.code || ''}
                     />
                     <button
                       className="shrink-0 rounded-r-sm bg-primary px-3 font-mono text-sm font-bold text-primary-foreground"
-                      onClick={() => setPromoApplied(promoCode.trim().length > 0)}
+                      onClick={() => {
+                        if (activeCoupon) { setPromoApplied(false); setCouponRemoved(true) }
+                        else { setCouponRemoved(false); setPromoApplied(promoCode.trim().length > 0) }
+                      }}
                       type="button"
                     >
-                      Aplicar
+                      {activeCoupon ? 'Remover' : 'Aplicar'}
                     </button>
                   </div>
                 )}
-                {promoApplied && <p className="mt-1 text-xs text-primary">Desconto de 10% aplicado.</p>}
+                {quoteQuery.error && <p className="mt-1 text-xs text-primary" role="alert">{quoteQuery.error.message}</p>}
+                {quote?.discount !== '0.00000000' && quote && <p className="mt-1 text-xs text-primary">Desconto de {activeCoupon} aplicado.</p>}
               </div>
 
               <dl className="mt-3 space-y-2 font-mono">
                 <div className="flex h-6 items-center justify-between text-[15px] leading-5">
-                  <dt>Subtotal</dt><dd className="text-lg leading-5">{subtotal.toFixed(2)} ETH</dd>
+                  <dt>Subtotal</dt><dd className="text-lg leading-5">{subtotal} ETH</dd>
                 </div>
                 <div className="flex h-6 items-center justify-between text-[15px] leading-5">
-                  <dt>Desconto do lançamento</dt><dd className="text-lg leading-5">(−) {discount.toFixed(2)}</dd>
+                  <dt>Desconto do lançamento</dt><dd className="text-lg leading-5">(−) {discount} ETH</dd>
                 </div>
                 <div className="flex h-6 items-center justify-between text-[15px] leading-5">
-                  <dt>Taxa de rede</dt><dd className="text-lg leading-5">{fee.toFixed(3)} ETH</dd>
+                  <dt>Taxa de rede</dt><dd className="text-lg leading-5">{fee} ETH</dd>
                 </div>
                 <p className="text-right text-xs leading-4 text-primary">Taxa estimada</p>
                 <div className="flex items-center justify-between border-t border-border pt-2 text-[15px] font-bold leading-5">
-                  <dt className="pl-8">Total</dt><dd className="pr-8 text-lg leading-5 text-primary">{total.toFixed(3)} ETH</dd>
+                  <dt className="pl-8">Total</dt><dd className="pr-8 text-lg leading-5 text-primary">{total} ETH</dd>
                 </div>
               </dl>
 
@@ -394,6 +458,7 @@ export function CheckoutPage() {
                 ))}
               </fieldset>
               <button
+                disabled={orderMutation.isPending || !quote}
                 className="mt-6 h-11 w-full rounded-md bg-primary px-4 font-mono text-[15px] font-bold leading-4 text-[#140D0A] transition-colors hover:bg-primary-dark"
                 type="submit"
               >
@@ -411,6 +476,7 @@ export function CheckoutPage() {
               </a>
               <h1 className="text-xl font-bold leading-4 text-foreground max-[360px]:text-base">Pagamento com carteira</h1>
             </header>
+            {(purchaseError || quoteQuery.error) && <p className="mb-3 text-xs text-primary" role="alert">{purchaseError || quoteQuery.error?.message}</p>}
 
             <section aria-labelledby="connected-wallet-title">
               <div className="mb-3 flex items-center justify-between">
@@ -465,10 +531,10 @@ export function CheckoutPage() {
 
             <div className="mt-3 flex items-center justify-end gap-5 pr-1 text-sm font-bold leading-5">
               <span className="text-foreground">Total:</span>
-              <span className="text-base text-primary">{total.toFixed(3)} ETH</span>
+              <span className="text-base text-primary">{total} ETH</span>
             </div>
 
-            <button className="fixed inset-x-[13px] bottom-[18px] z-30 h-[60px] rounded-full bg-primary px-4 text-[15px] font-bold leading-4 text-[#140D0A]" type="submit">
+            <button disabled={orderMutation.isPending || !quote} className="fixed inset-x-[13px] bottom-[18px] z-30 h-[60px] rounded-full bg-primary px-4 text-[15px] font-bold leading-4 text-[#140D0A] disabled:opacity-60" type="submit">
               Confirmar compra
             </button>
           </form>

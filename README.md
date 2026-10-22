@@ -1,14 +1,26 @@
-# Desafio Frontend — Marketplace de NFTs
+# Kurio — Marketplace de NFTs
 
 ## Ambiente de desenvolvimento
 
-O repositório está preparado com Vite, React, TypeScript, TanStack Router e Query, Axios, Socket.IO Client, Tailwind CSS v4, MSW, shadcn/ui e Playwright. Esta etapa contém somente a rota inicial de smoke test; nenhuma funcionalidade do marketplace foi implementada.
+Marketplace responsivo construído com React, TypeScript, TanStack Router/Query, Axios, Tailwind CSS, MSW, Socket.IO e Playwright. As APIs simuladas funcionam no navegador sem serviços externos.
 
-Requer Node.js `>=20.19.0` (validado com Node 22.17.1) e npm 11.5.2. Após clonar, execute `npm install` e use `npm run dev` para iniciar a aplicação.
+Requer Node.js `>=20.19.0`. Execute `npm install` e `npm run dev`. O MSW fica ativado por padrão; defina `VITE_ENABLE_MOCKS=false` somente quando houver uma API real configurada em `VITE_API_BASE_URL`. Configure `VITE_SOCKET_URL` para apontar o cliente Socket.IO para seu servidor; em desenvolvimento o MSW intercepta a conexão local.
 
-Copie `.env.example` para `.env.local` para ajustar as variáveis de infraestrutura. O MSW só inicia em desenvolvimento quando `VITE_ENABLE_MOCKS=true`; seus handlers estão vazios até a próxima etapa. Comandos disponíveis: `npm run build`, `npm run preview`, `npm run lint`, `npm run typecheck`, `npm run test:e2e` e `npm run test:e2e:ui`. O Playwright está configurado para Chromium desktop e mobile; instale o navegador com `npx playwright install chromium` quando for executar o smoke test.
+Comandos: `npm run build`, `npm run preview`, `npm run lint`, `npm run typecheck` e `npm run test:e2e`. Instale Chromium com `npx playwright install chromium` antes do primeiro E2E. O Playwright cobre Chromium desktop e mobile.
 
-TanStack Query inicia com `staleTime` de 30 segundos, uma tentativa de retry para queries e sem refetch ao focar a janela. O socket é criado sob demanda, permanece desconectado até uma feature chamar `connect()` e pode ser encerrado por `disconnectSocket()`.
+### Dados de demonstração
+
+As contas fictícias são `colecionador@kurio.test` / `Kurio123!` e `artista@kurio.test` / `Artista123!`. Os dados de contas, carteiras, favoritos, carrinho e pedidos persistem no `localStorage`; senhas são armazenadas apenas como hash de demonstração. Use uma janela privada ou limpe `localStorage` para reiniciar a demonstração.
+
+Os handlers MSW expõem `/api/auth`, `/api/nfts`, `/api/favorites`, `/api/cart`, `/api/quote`, `/api/orders`, `/api/profile` e `/api/wallets`. Adicione `?scenario=server-error` (ou defina `x-mock-scenario`) para simular `server-error`, `unauthorized`, `bad-request`, `forbidden`, `not-found`, `conflict`, `network-error`, `timeout`, `slow` e `variable-latency`. Os cenários `payment-declined` e `timeout-after-create` simulam o checkout. Cupons: `KURIO10`, `EXPIRED` e um código inválido.
+
+Eventos WebSocket de demonstração: defina `localStorage.kurio-mock-scenario` como `price-changed`, `availability-changed` ou `duplicate-old` antes de carregar a página. Os eventos atualizam o cache apenas quando a versão recebida é mais recente. Pedidos emitem `order.updated` para a sessão do comprador.
+
+O cliente Query usa cache de 30 segundos, uma tentativa para queries e não atualiza ao focar a janela. O catálogo guarda busca, filtros, ordenação e página na URL. Pedidos usam chave de idempotência e snapshot imutável da cotação. O Vercel rewrite está configurado para suportar rotas diretas do app.
+
+## Implementação
+
+Inclui descoberta e filtros, detalhes de NFT, favoritos autenticados, carrinho persistente, cotação/cupom, checkout com carteiras, recuperação por idempotência, recibo de pedido, login/cadastro, perfil, alteração de senha, carteiras e histórico de pedidos. Estados de carregamento, lista vazia e erro têm apresentação própria. Não há integração com blockchain ou gateway de pagamento real.
 
 Implemente o **NFT Marketplace** em React e TypeScript, seguindo o [layout no Figma](https://www.figma.com/design/Ff0SksUi7UFtPWUO8kyNtw/Frontend-Challenge?node-id=0-1).
 
