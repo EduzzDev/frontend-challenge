@@ -13,6 +13,10 @@ test('marketplace NFT opens its detail page with aligned related artwork and exi
 
   await expect(page).toHaveURL(/\/nft\/emerald-ape-042$/)
   await expect(page.getByRole('heading', { name: 'Emerald Ape #042' })).toBeVisible()
+  const marketplaceLink = page.locator('header a[href="/#mercado"]')
+  await expect(marketplaceLink).toHaveAttribute('aria-current', 'page')
+  await expect(marketplaceLink).toHaveCSS('color', 'rgb(210, 138, 76)')
+  await expect(marketplaceLink).toHaveCSS('font-weight', '700')
   await expect(page.getByRole('navigation', { name: 'Navegação estrutural' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Mais desta coleção' })).toBeVisible()
   await expect(page.getByRole('contentinfo')).toBeVisible()
@@ -102,12 +106,16 @@ test('marketplace NFT opens its detail page with aligned related artwork and exi
 test('market navigation returns to collections and marketplace filters update the NFTs', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 })
   await page.goto('/')
-  await page
+  const marketLink = page
     .getByRole('navigation', { name: 'Navegação principal' })
     .getByRole('link', { name: 'Mercado', exact: true })
-    .click()
+  await marketLink.click()
 
   await expect(page).toHaveURL(/\/#mercado$/)
+  await expect(marketLink).toHaveAttribute('aria-current', 'page')
+  await expect(marketLink).toHaveCSS('color', 'rgb(210, 138, 76)')
+  await expect(marketLink).toHaveCSS('font-weight', '700')
+  await expect(marketLink).toHaveCSS('height', '45px')
   const marketplace = page.getByRole('region', { name: 'NFTs disponíveis' })
   await expect(marketplace).toBeVisible()
 
@@ -132,6 +140,193 @@ test('market navigation returns to collections and marketplace filters update th
   await expect(marketplace.getByRole('link')).toHaveCount(1)
   await expect(marketplace.getByRole('heading', { name: 'Golden Signal #160' })).toBeVisible()
   await expect(marketplace.getByRole('heading', { name: 'Sage Nomad #009' })).toHaveCount(0)
+})
+
+test('cart header opens the cart and buying an NFT adds the selected quantity', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('link', { name: 'Carrinho, 6 itens' }).click()
+
+  await expect(page).toHaveURL(/\/cart$/)
+  await expect(page.getByRole('heading', { name: 'Resumo da carteira' })).toBeVisible()
+  const cartItems = page.getByRole('region', { name: 'Itens do carrinho' })
+  await expect(cartItems.getByRole('heading', { name: 'Emerald Ape #042' })).toBeVisible()
+  await expect(cartItems.getByRole('heading', { name: 'Violet Nomad #314' })).toBeVisible()
+  await expect(cartItems.getByRole('heading', { name: 'Ivory Baron #008' })).toBeVisible()
+  await expect(page.getByText('26.83 ETH')).toBeVisible()
+  await expect(page.getByText('26.846 ETH')).toBeVisible()
+
+  const recommendations = page.getByRole('region', { name: 'Colecionadores também viram' })
+  await expect(recommendations.getByRole('listitem')).toHaveCount(5)
+  for (const name of [
+    'Cosmic Bloom #118',
+    'Violet Nomad #314',
+    'Ivory Baron #008',
+    'Golden Beat #207',
+    'Golden Signal #160',
+  ]) {
+    await expect(recommendations.getByRole('link', { name: `Ver detalhes de ${name}` })).toBeVisible()
+  }
+  await expect(recommendations.locator('img')).toHaveCount(5)
+  await expect(recommendations.getByLabel('Página 2 de 3')).toBeVisible()
+  await expect(recommendations).not.toHaveCSS('border-top-width', '1px')
+  await expect(recommendations.getByRole('heading', { name: 'Colecionadores também viram' }))
+    .toHaveCSS('font-size', '17px')
+  await expect(recommendations.getByRole('heading', { name: 'Colecionadores também viram' }))
+    .toHaveCSS('border-bottom-width', '1px')
+  await expect(recommendations.locator('ul')).toHaveCSS('border-bottom-width', '0px')
+  await expect(recommendations.locator('h3').first()).toHaveCSS('font-size', '15px')
+  await expect(recommendations.locator('h3').first()).toHaveCSS('line-height', '20px')
+  await expect(recommendations.locator('p').first()).toHaveCSS('font-size', '16px')
+  await expect(recommendations.locator('p').first()).toHaveCSS('color', 'rgb(232, 155, 85)')
+  expect(await recommendations.evaluate((element) => {
+    const footer = document.querySelector('footer')
+    return footer !== null && Boolean(element.compareDocumentPosition(footer) & Node.DOCUMENT_POSITION_FOLLOWING)
+  })).toBe(true)
+
+  const summary = page.getByRole('complementary', { name: 'Resumo da carteira' })
+  for (const label of ['Subtotal', 'Desconto do lançamento', 'Taxa de rede']) {
+    await expect(summary.locator('dt').filter({ hasText: label })).toHaveCSS('font-size', '15px')
+    await expect(summary.locator('dt').filter({ hasText: label })).toHaveCSS('font-weight', '400')
+    await expect(summary.locator('dt').filter({ hasText: label })).toHaveCSS('line-height', '15px')
+    await expect(summary.locator('dt').filter({ hasText: label }).locator('..')).toHaveCSS('height', '20px')
+  }
+  const subtotalValue = summary.locator('dd').filter({ hasText: '26.83 ETH' })
+  await expect(subtotalValue).toHaveCSS('width', '98px')
+  await expect(subtotalValue).toHaveCSS('font-size', '18px')
+  await expect(subtotalValue).toHaveCSS('font-weight', '400')
+  await expect(subtotalValue).toHaveCSS('line-height', '16px')
+  const totalLabel = summary.getByText('Total', { exact: true })
+  await expect(totalLabel).toHaveCSS('font-size', '15px')
+  await expect(totalLabel).toHaveCSS('font-weight', '700')
+  await expect(totalLabel).toHaveCSS('line-height', '16px')
+  const totalValue = summary.locator('dd').filter({ hasText: '26.846 ETH' })
+  await expect(totalValue).toHaveCSS('width', '109px')
+  await expect(totalValue).toHaveCSS('font-size', '18px')
+  await expect(totalValue).toHaveCSS('font-weight', '700')
+  await expect(totalValue).toHaveCSS('line-height', '16px')
+  const checkoutButton = summary.getByRole('button', { name: 'Conectar e finalizar' })
+  await expect(checkoutButton).toHaveCSS('font-size', '15px')
+  await expect(checkoutButton).toHaveCSS('font-weight', '700')
+  await expect(checkoutButton).toHaveCSS('line-height', '16px')
+  await expect(checkoutButton).toHaveCSS('color', 'rgb(20, 13, 10)')
+  const continueExploring = summary.getByRole('link', { name: 'Continuar explorando' })
+  await expect(continueExploring).toHaveCSS('font-size', '15px')
+  await expect(continueExploring).toHaveCSS('font-weight', '400')
+  await expect(continueExploring).toHaveCSS('line-height', '15px')
+  await expect(continueExploring).toHaveCSS('color', 'rgb(232, 155, 85)')
+  await checkoutButton.click()
+  await expect(page).toHaveURL(/\/checkout$/)
+  await expect(page.getByRole('heading', { name: 'Perfil do colecionador' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Seus NFTs' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Confirmar compra' })).toBeVisible()
+  await expect(page.getByRole('contentinfo')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Perfil do colecionador' })).toHaveCSS('font-size', '17px')
+  const walletOptions = page.getByRole('group', { name: 'Carteira e rede' })
+  const walletHeading = walletOptions.locator('legend')
+  await expect(walletHeading).toHaveCSS('font-size', '17px')
+  await expect(walletHeading).toHaveCSS('font-weight', '700')
+  await expect(walletHeading).toHaveCSS('line-height', '16px')
+  await expect(walletOptions.locator('label')).toHaveCount(3)
+  for (const label of ['MetaMask', 'Coinbase Wallet']) {
+    const walletLabel = walletOptions.locator('label').filter({ hasText: label }).last()
+    await expect(walletLabel).toHaveCSS('height', '44px')
+    await expect(walletLabel).toHaveCSS('font-size', '15px')
+    await expect(walletLabel).toHaveCSS('font-weight', '400')
+  }
+  const providerBadge = walletOptions.getByText('METAMASK · WALLETCONNECT · COINBASE')
+  await expect(providerBadge).toBeVisible()
+  await expect(providerBadge).toHaveCSS('width', '215px')
+  await expect(providerBadge).toHaveCSS('height', '12px')
+  await expect(providerBadge).toHaveCSS('font-size', '9px')
+  await expect(providerBadge).toHaveCSS('font-weight', '700')
+  await expect(providerBadge).toHaveCSS('line-height', '9px')
+  await expect(providerBadge).toHaveCSS('letter-spacing', '0.1px')
+  const confirmPurchase = page.getByRole('button', { name: 'Confirmar compra' })
+  await expect(confirmPurchase).toHaveCSS('height', '44px')
+  await expect(confirmPurchase).toHaveCSS('font-size', '15px')
+  await expect(confirmPurchase).toHaveCSS('font-weight', '700')
+  const ensName = page.getByRole('combobox', { name: 'Nome ENS' })
+  await expect(ensName).toHaveValue('.eth')
+  await expect(ensName).toHaveCSS('width', '80px')
+  await expect(ensName).toHaveCSS('height', '40px')
+  const checkoutNfts = page.getByLabel('NFTs para pagamento')
+  await expect(checkoutNfts.getByRole('listitem')).toHaveCount(3)
+  const checkoutEmerald = checkoutNfts.getByRole('listitem').filter({ hasText: 'Emerald Ape #042' })
+  await expect(checkoutEmerald.getByRole('heading', { name: 'Emerald Ape #042' })).toHaveCSS('font-size', '16px')
+  await expect(checkoutEmerald.getByRole('heading', { name: 'Emerald Ape #042' })).toHaveCSS('font-weight', '700')
+  await expect(checkoutEmerald.getByText('ID do token: #0042')).toHaveCSS('font-size', '14px')
+  await expect(checkoutEmerald.getByText('(x 2)')).toHaveCSS('font-size', '17px')
+  await expect(checkoutEmerald.getByText('2.38 ETH')).toHaveCSS('font-size', '16px')
+  await expect(checkoutEmerald.getByText('2.38 ETH')).toHaveCSS('font-weight', '700')
+  await page.goBack()
+  await expect(page).toHaveURL(/\/cart$/)
+
+  const emeraldRow = page.getByRole('listitem').filter({ hasText: 'Emerald Ape #042' }).first()
+  const tableHeader = page.getByRole('heading', { name: 'NFTs' }).locator('..')
+  await expect(tableHeader).toHaveCSS('column-gap', '24px')
+  for (const label of ['NFTs', 'Preço', 'Edições', 'Total']) {
+    await expect(tableHeader.getByText(label, { exact: true })).toHaveCSS('font-size', '16px')
+    await expect(tableHeader.getByText(label, { exact: true })).toHaveCSS('font-weight', '500')
+    await expect(tableHeader.getByText(label, { exact: true })).toHaveCSS('line-height', '16px')
+  }
+  const nftName = emeraldRow.getByRole('heading', { name: 'Emerald Ape #042' })
+  await expect(nftName).toHaveCSS('font-size', '16px')
+  await expect(nftName).toHaveCSS('font-weight', '700')
+  await expect(nftName).toHaveCSS('line-height', '16px')
+  await expect(nftName).toHaveCSS('width', '154px')
+  const tokenId = emeraldRow.getByText('ID do token: #0042')
+  await expect(tokenId).toHaveCSS('width', '154px')
+  await expect(tokenId).toHaveCSS('font-size', '14px')
+  await expect(tokenId).toHaveCSS('font-weight', '400')
+  await expect(tokenId).toHaveCSS('line-height', '16px')
+  await expect(tokenId).toHaveCSS('color', 'rgb(179, 148, 99)')
+  const price = emeraldRow.getByText('1.19 ETH', { exact: true })
+  await expect(price).toHaveCSS('width', '77px')
+  await expect(price).toHaveCSS('font-size', '16px')
+  await expect(price).toHaveCSS('font-weight', '500')
+  await expect(price).toHaveCSS('line-height', '16px')
+  const quantityGroup = emeraldRow.getByRole('group', { name: 'Edições de Emerald Ape #042' }).filter({ visible: true }).first()
+  const decrease = quantityGroup.getByRole('button', { name: 'Diminuir Emerald Ape #042' })
+  await expect(decrease).toHaveCSS('width', '20px')
+  await expect(decrease).toHaveCSS('height', '30px')
+  await expect(quantityGroup.getByText('2', { exact: true })).toHaveCSS('font-size', '17px')
+  const removeButton = emeraldRow.getByRole('button', { name: 'Remover Emerald Ape #042' })
+  await expect(removeButton.locator('svg')).toHaveAttribute('viewBox', '0 0 24 24')
+  await expect(removeButton.locator('svg')).toHaveAttribute('width', '24')
+  await expect(removeButton.locator('svg path')).toHaveAttribute('stroke', '#B39463')
+  await expect(removeButton.locator('svg path')).toHaveAttribute('stroke-width', '1.5')
+  if ((await page.evaluate(() => window.innerWidth)) < 768) {
+    const trashRightGap = await removeButton.locator('svg path').evaluate((path) => {
+      const row = path.closest('li')
+      if (!row) throw new Error('Linha do carrinho não encontrada')
+      return row.getBoundingClientRect().right - path.getBoundingClientRect().right
+    })
+    expect(trashRightGap).toBeGreaterThanOrEqual(26)
+    expect(trashRightGap).toBeLessThanOrEqual(29)
+  }
+  const totalAmount = page.locator('dd').filter({ hasText: '26.846 ETH' })
+  await expect(totalAmount).toHaveCSS('width', '109px')
+  await expect(totalAmount).toHaveCSS('font-size', '18px')
+  await expect(totalAmount).toHaveCSS('font-weight', '700')
+  await expect(totalAmount).toHaveCSS('line-height', '16px')
+
+  await page.goto('/')
+  await page.getByRole('link', { name: 'Ver detalhes de Emerald Ape #042' }).click()
+  await page.getByRole('button', { name: 'Aumentar quantidade' }).click()
+  await page.getByRole('button', { name: 'Aumentar quantidade' }).click()
+  await page.getByRole('button', { name: 'COMPRAR' }).click()
+
+  await expect(page).toHaveURL(/\/cart$/)
+  const purchasedNftRow = page.getByRole('listitem').filter({ hasText: 'Emerald Ape #042' }).first()
+  await expect(purchasedNftRow).toBeVisible()
+  const storedQuantity = await page.evaluate(() => {
+    const items = JSON.parse(window.localStorage.getItem('kurio-cart') ?? '[]') as {
+      nft: { name: string; number: string }
+      quantity: number
+    }[]
+    return items.find((item) => item.nft.name === 'Emerald Ape' && item.nft.number === '042')?.quantity
+  })
+  expect(storedQuantity).toBe(5)
 })
 
 test('authentication modal switches to signup and toggles password visibility', async ({ page }) => {

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AuthModal } from '@/components/auth-modal'
 
 const navigationItems = [
@@ -7,6 +7,12 @@ const navigationItems = [
   { label: 'Criadores', href: '#criadores' },
   { label: 'Aprenda', href: '#aprenda' },
 ]
+
+function getSelectedNavigationHref(activeHref: string) {
+  if (window.location.hash) return window.location.hash
+  if (window.location.pathname !== '/') return '#mercado'
+  return activeHref.startsWith('#') ? activeHref : '#inicio'
+}
 
 function SearchIcon() {
   return (
@@ -34,7 +40,17 @@ export function HomeHeader({
   navigationPrefix?: string
 }) {
   const [isAuthOpen, setIsAuthOpen] = useState(false)
+  const [selectedHref, setSelectedHref] = useState(() => getSelectedNavigationHref(activeHref))
   const authTriggerRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    const syncSelectedNavigation = () => {
+      setSelectedHref(getSelectedNavigationHref(activeHref))
+    }
+
+    window.addEventListener('hashchange', syncSelectedNavigation)
+    return () => window.removeEventListener('hashchange', syncSelectedNavigation)
+  }, [activeHref])
 
   function closeAuthModal() {
     setIsAuthOpen(false)
@@ -57,14 +73,15 @@ export function HomeHeader({
       shrink-0 items-center justify-between gap-10 lg:flex">
         {navigationItems.map(({ label, href }) => (
           <a
-            aria-current={activeHref === href ? 'page' : undefined}
-            className={`relative flex h-full items-center border-b-4 border-transparent px-0.5 pt-0.5 font-mono text-base font-normal transition-colors ${
-              activeHref === href
+            aria-current={selectedHref === href ? 'page' : undefined}
+            className={`relative flex h-full items-center border-b-4 border-transparent px-0.5 pt-0.5 font-mono text-base transition-colors ${
+              selectedHref === href
                 ? 'font-bold text-primary after:absolute after:-bottom-3 after:left-0 after:right-0 after:h-1 after:bg-primary'
-                : 'text-foreground hover:text-primary'
+                : 'font-normal text-foreground hover:text-primary'
             }`}
             href={href.startsWith('/') ? href : `${navigationPrefix}${href}`}
             key={label}
+            onClick={() => setSelectedHref(href)}
           >
             {label}
           </a>
@@ -79,13 +96,13 @@ export function HomeHeader({
         >
           <SearchIcon />
         </button>
-        <button
+        <a
           aria-label="Carrinho, 6 itens"
+          href="/cart"
           className="flex h-6.5 w-8.25 shrink-0 items-center justify-center transition-opacity hover:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          type="button"
         >
           <CartIcon />
-        </button>
+        </a>
         <button
           aria-label="Entrar"
           className="h-8.75 w-25 shrink-0 rounded-md transition-opacity hover:opacity-90 

@@ -1,4 +1,6 @@
 import { createRootRoute, createRoute, createRouter, Outlet } from '@tanstack/react-router'
+import { CartPage } from '@/components/cart-page'
+import { CheckoutPage } from '@/components/checkout-page'
 import { HomePage } from '@/components/home-page'
 import { NftDetailPage } from '@/components/nft-detail-page'
 
@@ -18,7 +20,19 @@ const nftDetailRoute = createRoute({
   component: NftDetailPage,
 })
 
-const routeTree = rootRoute.addChildren([indexRoute, nftDetailRoute])
+const cartRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/cart',
+  component: CartPage,
+})
+
+const checkoutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/checkout',
+  component: CheckoutPage,
+})
+
+const routeTree = rootRoute.addChildren([indexRoute, nftDetailRoute, cartRoute, checkoutRoute])
 
 export const router = createRouter({ routeTree })
 

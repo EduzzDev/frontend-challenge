@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Heart, Star } from 'lucide-react'
-import { useParams } from '@tanstack/react-router'
+import { useNavigate, useParams } from '@tanstack/react-router'
 import { HomeHeader } from '@/components/home-header'
 import { HomeFooter } from '@/components/home-footer'
+import { addToCart } from '@/lib/cart'
 import { nfts, type Nft } from '@/lib/nfts'
 
 const editionOptions = ['1/1', '1/10', '1/50', 'ABERTA']
@@ -28,6 +29,7 @@ function nftSlug(nft: Nft) {
 
 export function NftDetailPage() {
   const { nftId } = useParams({ from: '/nft/$nftId' })
+  const navigate = useNavigate()
   const nft = nfts.find((item) => nftSlug(item) === nftId)
   const [selectedThumbnail, setSelectedThumbnail] = useState(0)
   const [selectedEdition, setSelectedEdition] = useState('1/50')
@@ -49,8 +51,14 @@ export function NftDetailPage() {
     )
   }
 
+  const selectedNft = nft
   const relatedNfts = nfts.filter((item) => item !== nft).slice(0, 5)
   const shareUrl = encodeURIComponent(window.location.href)
+
+  function buyNft() {
+    addToCart(selectedNft, quantity)
+    void navigate({ to: '/cart' })
+  }
 
   return (
     <>
@@ -160,7 +168,11 @@ export function NftDetailPage() {
                 >
                   +
                 </button>
-                <button className="ml-auto rounded-md bg-primary px-5 py-2 font-sans text-sm font-bold text-primary-foreground transition-colors hover:bg-primary-dark" type="button">
+                <button
+                  className="ml-auto rounded-md bg-primary px-5 py-2 font-sans text-sm font-bold text-primary-foreground transition-colors hover:bg-primary-dark"
+                  onClick={buyNft}
+                  type="button"
+                >
                   COMPRAR
                 </button>
                 <button
