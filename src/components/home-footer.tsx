@@ -1,35 +1,18 @@
-import { Fragment } from 'react'
-
 const footerFeatures = [
   {
     initial: 'W',
     title: 'Segurança da carteira',
-    description: [
-      'Proteja sua carteira e',
-      'colecione arte digital',
-      'verificada com',
-      'confiança.',
-    ],
+    description: 'Proteja sua carteira e colecione arte digital verificada com confiança.',
   },
   {
     initial: 'C',
     title: 'Criadores em destaque',
-    description: [
-      'Conheça artistas,',
-      'estúdios e comunidades',
-      'que moldam a cultura',
-      'digital na rede.',
-    ],
+    description: 'Conheça artistas, estúdios e comunidades que moldam a cultura digital na rede.',
   },
   {
     initial: 'D',
     title: 'Alertas de lançamentos',
-    description: [
-      'Receba calendários de',
-      'cunhagem, novidades de',
-      'listas de acesso e',
-      'análises do mercado.',
-    ],
+    description: 'Receba novidades de coleções, listas de acesso antecipado e análises do mercado.',
   },
 ]
 
@@ -99,16 +82,16 @@ function SocialIcon({ icon }: { icon: string }) {
 
 export function HomeFooter() {
   return (
-    <footer className="mx-auto w-full max-w-300 px-4 md:px-0">
-      <div className="bg-card">
+    <footer className="mx-auto w-full max-w-300 px-4 pb-[calc(64px+env(safe-area-inset-bottom))] max-md:px-0 md:px-0 md:pb-0">
+      <div className="overflow-hidden rounded-t-3xl bg-card md:rounded-2xl">
         <section
           aria-label="Destaques e novidades"
-          className="px-4 py-6 md:px-8 xl:h-[250px] xl:pt-8 xl:pb-4"
+          className="px-4 py-8 md:px-8 md:py-10 xl:h-[250px] xl:pt-8 xl:pb-4"
         >
-          <div className="mx-auto grid max-w-[1154px] grid-cols-1 gap-6 md:grid-cols-2 xl:h-full xl:grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,1.3fr)] xl:gap-0">
+          <div className="mx-auto grid max-w-[1154px] grid-cols-1 gap-x-6 gap-y-8 md:grid-cols-2 xl:h-full xl:grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,1.3fr)] xl:gap-x-0 xl:gap-y-0">
             {footerFeatures.map(({ initial, title, description }) => (
               <article
-                className="px-4 xl:border-r xl:border-primary/70"
+                className="min-w-0 px-3 md:px-0 max-[359px]:px-1 xl:border-r xl:border-primary/70"
                 key={initial}
               >
                 <div
@@ -117,23 +100,18 @@ export function HomeFooter() {
                 >
                   {initial}
                 </div>
-                <h2 className="mt-3 font-mono text-[17px] font-bold leading-4 text-foreground">
+                <h2 className="mt-3 font-mono text-[17px] font-bold leading-6 text-foreground">
                   {title}
                 </h2>
-                <p className="mt-2 h-[88px] w-[204px] max-w-full font-mono text-sm font-normal leading-[22px] text-text-secondary">
-                  {description.map((line, lineIndex) => (
-                    <Fragment key={line}>
-                      {lineIndex > 0 && <br />}
-                      {line}
-                    </Fragment>
-                  ))}
+                <p className="mt-2 w-full max-w-[280px] font-mono text-sm font-normal leading-[22px] text-text-secondary">
+                  {description}
                 </p>
               </article>
             ))}
 
-            <section aria-labelledby="footer-newsletter-title" className="px-4">
+            <section aria-labelledby="footer-newsletter-title" className="min-w-0 px-3 md:px-0">
               <h2
-                className="max-w-[325px] font-mono text-lg font-bold leading-4 text-foreground xl:w-[325px]"
+                className="max-w-[325px] font-mono text-base font-bold leading-6 text-foreground sm:text-lg xl:w-[325px]"
                 id="footer-newsletter-title"
               >
                 Antecipe-se ao próximo lançamento
@@ -146,18 +124,14 @@ export function HomeFooter() {
                   type="email"
                 />
                 <button
-                  className="h-10 w-[85px] shrink-0 bg-primary pt-3 pr-1 pb-3 pl-4 font-mono text-lg font-bold leading-4 text-primary-foreground transition-colors hover:bg-primary-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-foreground"
+                  className="flex h-10 w-[85px] shrink-0 items-center justify-center bg-primary font-mono text-base font-bold leading-5 text-primary-foreground transition-colors hover:bg-primary-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-foreground"
                   type="button"
                 >
                   Enviar
                 </button>
               </div>
-              <p className="mt-3 h-[66px] max-w-[325px] font-mono text-sm font-normal leading-[22px] text-text-secondary xl:w-[325px]">
-                Receba lançamentos selecionados,
-                <br />
-                histórias de criadores e novidades do
-                <br />
-                mercado.
+              <p className="mt-3 min-h-[66px] max-w-[325px] font-mono text-sm font-normal leading-[22px] text-text-secondary xl:w-[325px]">
+                Receba lançamentos selecionados, histórias de criadores e novidades do mercado.
               </p>
             </section>
           </div>
@@ -165,29 +139,29 @@ export function HomeFooter() {
 
         <section
           aria-label="Informações de contato"
-          className="grid min-h-[88px] grid-cols-1 items-center gap-4 bg-surface-dark px-8 py-5 text-center font-mono text-sm leading-[22px] text-foreground sm:grid-cols-2 sm:text-left xl:grid-cols-4 xl:py-0"
+          className="grid grid-cols-1 items-start gap-4 border-t border-border bg-surface-dark px-6 py-6 font-mono text-sm leading-[22px] text-foreground sm:px-8 md:grid-cols-2 md:gap-x-8 md:gap-y-4 xl:min-h-[104px] xl:grid-cols-4 xl:items-center xl:gap-4 xl:py-0"
         >
           <a
             aria-label="Kurio - início"
-            className="font-bold tracking-[0.12em] hover:text-primary"
+            className="w-fit font-bold tracking-[0.12em] hover:text-primary"
             href="#inicio"
           >
             KURIO
           </a>
-          <p className="max-w-[240px] justify-self-center xl:justify-self-start">
+          <p className="max-w-[260px]">
             Feito para colecionadores, criadores e cultura
           </p>
-          <a className="hover:text-primary" href="mailto:contato@email.com">
+          <a className="w-fit hover:text-primary" href="mailto:contato@email.com">
             contato@email.com
           </a>
-          <a className="hover:text-primary" href="tel:+551140028922">
+          <a className="w-fit hover:text-primary" href="tel:+551140028922">
             +55 11 4002 8922
           </a>
         </section>
 
         <section
           aria-label="Links e redes sociais"
-          className="grid min-h-[236px] grid-cols-1 gap-8 px-8 py-8 sm:grid-cols-2 xl:grid-cols-4 xl:gap-0"
+          className="grid grid-cols-1 gap-x-8 gap-y-10 border-t border-border px-6 py-8 sm:px-8 md:grid-cols-2 md:gap-x-12 md:gap-y-10 xl:min-h-[236px] xl:grid-cols-4 xl:gap-x-6 xl:gap-y-8"
         >
           {footerGroups.map(({ title, links }) => (
             <nav aria-label={title} key={title}>

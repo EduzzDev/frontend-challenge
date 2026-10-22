@@ -7,6 +7,108 @@ test('home route renders the challenge heading', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Base shadcn/ui pronta' })).toBeVisible()
 })
 
+test('mobile home matches the storefront layout and uses the supplied menu icons', async ({ page }) => {
+  await page.setViewportSize({ width: 414, height: 896 })
+  await page.goto('/')
+
+  await expect(page.getByRole('searchbox', { name: 'Explorar coleções' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Filtros' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'SEJA DONO DA CULTURA DIGITAL' })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Menu mobile' })).toBeVisible()
+  for (const [label, image] of [
+    ['Início', 'home.png'],
+    ['Favoritos', 'favorite-heart.png'],
+    ['Carrinho', 'carrinho.png'],
+    ['Entrar', 'user.png'],
+  ]) {
+    await expect(page.getByRole('navigation', { name: 'Menu mobile' }).getByRole(label === 'Entrar' ? 'button' : 'link', { name: label }).locator('img')).toHaveAttribute('src', `/images/${image}`)
+  }
+
+  const nftRegion = page.getByRole('region', { name: 'NFTs disponíveis' })
+  const nftLinks = nftRegion.getByRole('link', { name: /^Ver detalhes de/ })
+  const emerald = await nftRegion.getByRole('link', { name: 'Ver detalhes de Emerald Ape #042' }).boundingBox()
+  const sage = await nftRegion.getByRole('link', { name: 'Ver detalhes de Sage Nomad #009' }).boundingBox()
+  const ivory = await nftRegion.getByRole('link', { name: 'Ver detalhes de Ivory Baron #008' }).boundingBox()
+  const golden = await nftRegion.getByRole('link', { name: 'Ver detalhes de Golden Beat #207' }).boundingBox()
+  if (!emerald || !sage || !ivory || !golden) throw new Error('Não foi possível medir os cartões da vitrine mobile.')
+  expect(emerald.x).toBeLessThan(sage.x)
+  expect(Math.abs(emerald.y - sage.y)).toBeLessThanOrEqual(1)
+  expect(ivory.x).toBeLessThan(golden.x)
+  expect(Math.abs(ivory.y - golden.y)).toBeLessThanOrEqual(1)
+  expect(ivory.y).toBeGreaterThan(emerald.y)
+
+  await page.getByRole('button', { name: 'Filtros' }).click()
+  await expect(page.getByRole('dialog', { name: 'Filtros do mercado' })).toBeVisible()
+  await page.getByRole('button', { name: 'Fechar filtros' }).click()
+  await page.getByRole('searchbox', { name: 'Explorar coleções' }).fill('Ivory Baron')
+  await expect(nftLinks).toHaveCount(1)
+  await expect(nftLinks).toHaveAccessibleName('Ver detalhes de Ivory Baron #008')
+})
+
+test('320px mobile layout keeps promotional content and footer readable', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 })
+  await page.goto('/')
+
+  const promotionalBanners = page.getByRole('region', { name: 'Destaques do marketplace' })
+  const firstBanner = promotionalBanners.locator('article').first()
+  const bannerImage = await firstBanner.locator('img').boundingBox()
+  const bannerHeading = await firstBanner.getByRole('heading').boundingBox()
+  const bannerDescription = await firstBanner.locator('p').boundingBox()
+  const bannerLink = await firstBanner.getByRole('link').boundingBox()
+
+  if (!bannerImage || !bannerHeading || !bannerDescription || !bannerLink) {
+    throw new Error('Não foi possível medir o banner promocional no mobile.')
+  }
+  expect(bannerHeading.y).toBeGreaterThanOrEqual(bannerImage.y + bannerImage.height)
+  expect(bannerDescription.y).toBeGreaterThanOrEqual(bannerHeading.y + bannerHeading.height)
+  expect(bannerLink.y).toBeGreaterThanOrEqual(bannerDescription.y + bannerDescription.height)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
+
+  await expect(page.getByRole('region', { name: 'Destaques e novidades' }).getByText('Alertas de lançamentos')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Destaques e novidades' })).not.toContainText('cunhagem')
+})
+
+test('application routes load when opened directly', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/cart')
+  await expect(page.getByRole('navigation', { name: 'Menu mobile' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'NFTs' })).toBeVisible()
+
+  await page.goto('/checkout')
+  await expect(page.getByRole('navigation', { name: 'Menu mobile' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Perfil do colecionador' })).toBeVisible()
+
+  await page.goto('/nft/emerald-ape-042')
+  await expect(page.getByRole('navigation', { name: 'Menu mobile' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Emerald Ape #042' })).toBeVisible()
+})
+
+test('NFT detail matches the mobile product layout with a fixed purchase bar', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 })
+  await page.goto('/nft/emerald-ape-042')
+
+  await expect(page.getByRole('link', { name: 'Voltar ao mercado' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Adicionar aos favoritos' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Emerald Ape #042' })).toBeVisible()
+  await expect(page.getByText('4.8', { exact: true })).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Opções de edição' }).getByRole('button')).toHaveCount(4)
+  await expect(page.getByRole('region', { name: 'Compra do NFT' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Comprar NFT' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Adicionar ao carrinho' })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Menu mobile' })).toHaveCount(0)
+
+  const artwork = await page.getByRole('img', { name: 'NFT Emerald Ape #042' }).boundingBox()
+  const title = await page.getByRole('heading', { name: 'Emerald Ape #042' }).boundingBox()
+  if (!artwork || !title) throw new Error('Não foi possível medir a arte e o título no layout mobile.')
+  expect(title.y).toBeGreaterThan(artwork.y + artwork.height)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
+
+  await page.getByRole('button', { name: 'Aumentar quantidade' }).click()
+  await expect(page.getByLabel('Quantidade selecionada')).toHaveText('2')
+  await page.getByRole('button', { name: 'Adicionar ao carrinho' }).click()
+  await expect(page).toHaveURL(/\/nft\/emerald-ape-042$/)
+})
+
 test('marketplace NFT opens its detail page with aligned related artwork and existing footer', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('link', { name: 'Ver detalhes de Emerald Ape #042' }).click()
@@ -17,7 +119,11 @@ test('marketplace NFT opens its detail page with aligned related artwork and exi
   await expect(marketplaceLink).toHaveAttribute('aria-current', 'page')
   await expect(marketplaceLink).toHaveCSS('color', 'rgb(210, 138, 76)')
   await expect(marketplaceLink).toHaveCSS('font-weight', '700')
-  await expect(page.getByRole('navigation', { name: 'Navegação estrutural' })).toBeVisible()
+  if ((await page.evaluate(() => window.innerWidth)) >= 768) {
+    await expect(page.getByRole('navigation', { name: 'Navegação estrutural' })).toBeVisible()
+  } else {
+    await expect(page.getByRole('navigation', { name: 'Navegação estrutural' })).toBeHidden()
+  }
   await expect(page.getByRole('heading', { name: 'Mais desta coleção' })).toBeVisible()
   await expect(page.getByRole('contentinfo')).toBeVisible()
 
@@ -26,13 +132,17 @@ test('marketplace NFT opens its detail page with aligned related artwork and exi
   const mainNftImage = page.getByRole('img', { name: 'NFT Emerald Ape #042' }).first()
   const mainImageSource = await mainNftImage.getAttribute('src')
   const galleryOptions = page.getByRole('button', { name: /^Ver imagem \d de Emerald Ape$/ })
-  await expect(galleryOptions).toHaveCount(4)
-  for (const option of await galleryOptions.all()) {
-    await expect(option.locator('img')).toHaveAttribute('src', mainImageSource!)
+  if ((await page.evaluate(() => window.innerWidth)) >= 768) {
+    await expect(galleryOptions).toHaveCount(4)
+    for (const option of await galleryOptions.all()) {
+      await expect(option.locator('img')).toHaveAttribute('src', mainImageSource!)
+    }
+    await galleryOptions.nth(2).click()
+    await expect(galleryOptions.nth(2)).toHaveAttribute('aria-pressed', 'true')
+    await expect(mainNftImage).toHaveAttribute('src', mainImageSource!)
+  } else {
+    await expect(galleryOptions).toHaveCount(0)
   }
-  await galleryOptions.nth(2).click()
-  await expect(galleryOptions.nth(2)).toHaveAttribute('aria-pressed', 'true')
-  await expect(mainNftImage).toHaveAttribute('src', mainImageSource!)
 
   const editions = page.getByRole('group', { name: 'Opções de edição' })
   await expect(editions.getByRole('button', { name: '1/50' })).toHaveAttribute('aria-pressed', 'true')
@@ -46,13 +156,18 @@ test('marketplace NFT opens its detail page with aligned related artwork and exi
   await expect(quantity).toHaveText('1')
   await expect(decreaseQuantity).toBeDisabled()
   for (const button of [decreaseQuantity, increaseQuantity]) {
-    await expect(button).toHaveCSS('width', '33px')
-    await expect(button).toHaveCSS('height', '49.5px')
-    await expect(button).toHaveCSS('border-top-width', '1px')
-    const borderRadius = await button.evaluate((element) =>
-      Number.parseFloat(getComputedStyle(element).borderTopLeftRadius),
-    )
-    expect(borderRadius).toBeGreaterThanOrEqual(24.75)
+    if ((await page.evaluate(() => window.innerWidth)) >= 768) {
+      await expect(button).toHaveCSS('width', '33px')
+      await expect(button).toHaveCSS('height', '49.5px')
+      await expect(button).toHaveCSS('border-top-width', '1px')
+      const borderRadius = await button.evaluate((element) =>
+        Number.parseFloat(getComputedStyle(element).borderTopLeftRadius),
+      )
+      expect(borderRadius).toBeGreaterThanOrEqual(24.75)
+    } else {
+      await expect(button).toHaveCSS('width', '18px')
+      await expect(button).toHaveCSS('height', '18px')
+    }
   }
   await increaseQuantity.click()
   await expect(quantity).toHaveText('2')
@@ -60,31 +175,34 @@ test('marketplace NFT opens its detail page with aligned related artwork and exi
   await expect(quantity).toHaveText('1')
 
   const tokenDetails = page.locator('dl')
-  await expect(tokenDetails).toHaveCSS('font-size', '15px')
+  const isDesktopViewport = (await page.evaluate(() => window.innerWidth)) >= 768
+  await expect(tokenDetails).toHaveCSS('font-size', isDesktopViewport ? '15px' : '11px')
   await expect(tokenDetails).toHaveCSS('font-weight', '400')
-  await expect(tokenDetails).toHaveCSS('line-height', '20px')
+  await expect(tokenDetails).toHaveCSS('line-height', isDesktopViewport ? '20px' : '16px')
   await expect(tokenDetails).toHaveCSS('color', 'rgb(179, 148, 99)')
 
-  const shareOptions = page.getByRole('navigation', { name: 'Compartilhar este NFT' })
-  await expect(shareOptions.getByRole('link')).toHaveCount(3)
-  await expect(shareOptions.getByRole('link', { name: 'Compartilhar no LinkedIn' })).toHaveAttribute(
-    'href',
-    /linkedin\.com\/sharing\/share-offsite\/\?url=/,
-  )
-  await expect(shareOptions.getByRole('link', { name: 'Compartilhar por e-mail' })).toHaveAttribute(
-    'href',
-    /^mailto:/,
-  )
-  await expect(shareOptions.getByRole('link', { name: 'Compartilhar no Twitter' })).toHaveAttribute(
-    'href',
-    /twitter\.com\/intent\/tweet\?url=/,
-  )
-  const shareLabel = page.getByText('Compartilhar este NFT:', { exact: true })
-  const labelBounds = await shareLabel.boundingBox()
-  const linkedinBounds = await shareOptions.getByRole('link', { name: 'Compartilhar no LinkedIn' }).boundingBox()
-  expect(labelBounds).not.toBeNull()
-  expect(linkedinBounds).not.toBeNull()
-  expect(Math.abs(labelBounds!.y + labelBounds!.height / 2 - (linkedinBounds!.y + linkedinBounds!.height / 2))).toBeLessThan(2)
+  if (isDesktopViewport) {
+    const shareOptions = page.getByRole('navigation', { name: 'Compartilhar este NFT' })
+    await expect(shareOptions.getByRole('link')).toHaveCount(3)
+    await expect(shareOptions.getByRole('link', { name: 'Compartilhar no LinkedIn' })).toHaveAttribute(
+      'href',
+      /linkedin\.com\/sharing\/share-offsite\/\?url=/,
+    )
+    await expect(shareOptions.getByRole('link', { name: 'Compartilhar por e-mail' })).toHaveAttribute(
+      'href',
+      /^mailto:/,
+    )
+    await expect(shareOptions.getByRole('link', { name: 'Compartilhar no Twitter' })).toHaveAttribute(
+      'href',
+      /twitter\.com\/intent\/tweet\?url=/,
+    )
+    const shareLabel = page.getByText('Compartilhar este NFT:', { exact: true })
+    const labelBounds = await shareLabel.boundingBox()
+    const linkedinBounds = await shareOptions.getByRole('link', { name: 'Compartilhar no LinkedIn' }).boundingBox()
+    expect(labelBounds).not.toBeNull()
+    expect(linkedinBounds).not.toBeNull()
+    expect(Math.abs(labelBounds!.y + labelBounds!.height / 2 - (linkedinBounds!.y + linkedinBounds!.height / 2))).toBeLessThan(2)
+  }
 
   const relatedImages = page.getByRole('region', { name: 'Mais desta coleção' }).getByRole('img')
   await expect(relatedImages).toHaveCount(5)
@@ -249,6 +367,29 @@ test('cart header opens the cart and buying an NFT adds the selected quantity', 
   await expect(ensName).toHaveValue('.eth')
   await expect(ensName).toHaveCSS('width', '80px')
   await expect(ensName).toHaveCSS('height', '40px')
+  const profileName = page.getByLabel('Nome do perfil')
+  const walletType = page.getByLabel('Tipo de carteira')
+  const referralCode = page.getByLabel('Código de indicação')
+  await expect(walletType).toBeVisible()
+  if ((await page.evaluate(() => window.innerWidth)) >= 640) {
+    const networkBox = await page.locator('form select[name="network"]').boundingBox()
+    const profileNameBox = await profileName.boundingBox()
+    const walletTypeBox = await walletType.boundingBox()
+    const referralCodeBox = await referralCode.boundingBox()
+    const emailBox = await page.locator('form').getByLabel('E-mail').boundingBox()
+    const ensNameBox = await ensName.boundingBox()
+    const useSecondaryWalletBox = await page.getByText('Usar outra carteira?', { exact: true }).boundingBox()
+    if (!networkBox || !profileNameBox || !walletTypeBox || !referralCodeBox || !emailBox || !ensNameBox || !useSecondaryWalletBox) {
+      throw new Error('Não foi possível medir o posicionamento dos campos do colecionador.')
+    }
+    expect(networkBox.x).toBeLessThan(profileNameBox.x)
+    expect(Math.abs(networkBox.y - profileNameBox.y)).toBeLessThanOrEqual(1)
+    expect(walletTypeBox.x).toBeLessThan(referralCodeBox.x)
+    expect(Math.abs(walletTypeBox.y - referralCodeBox.y)).toBeLessThanOrEqual(1)
+    expect(emailBox.x).toBeLessThan(ensNameBox.x)
+    expect(Math.abs(emailBox.y - ensNameBox.y)).toBeLessThanOrEqual(1)
+    expect(useSecondaryWalletBox.y - (ensNameBox.y + ensNameBox.height)).toBeLessThanOrEqual(14)
+  }
   const checkoutNfts = page.getByLabel('NFTs para pagamento')
   await expect(checkoutNfts.getByRole('listitem')).toHaveCount(3)
   const checkoutEmerald = checkoutNfts.getByRole('listitem').filter({ hasText: 'Emerald Ape #042' })
@@ -258,6 +399,72 @@ test('cart header opens the cart and buying an NFT adds the selected quantity', 
   await expect(checkoutEmerald.getByText('(x 2)')).toHaveCSS('font-size', '17px')
   await expect(checkoutEmerald.getByText('2.38 ETH')).toHaveCSS('font-size', '16px')
   await expect(checkoutEmerald.getByText('2.38 ETH')).toHaveCSS('font-weight', '700')
+  const requiredFields = page.locator('form input[required]')
+  for (const [index, value] of [
+    'Collector',
+    'collector42',
+    'Kurio Collector',
+    '0x1234567890abcdef',
+    'INVITE42',
+    'collector@example.com',
+  ].entries()) {
+    await requiredFields.nth(index).fill(value)
+  }
+  await page.locator('form select[required]').nth(0).selectOption({ label: 'Ethereum' })
+  await page.locator('form select[name="walletType"]').selectOption({ label: 'Carteira própria' })
+  await page.locator('input[name="payment-wallet"][value="metamask"]').check()
+  await page.getByRole('button', { name: 'Confirmar compra' }).click()
+  await expect(page.getByRole('heading', { name: 'Seus NFTs foram adicionados ao pedido' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Detalhes da transação' })).toBeVisible()
+  const receiptDetails = page.getByLabel('Dados do pedido')
+  await expect(receiptDetails).toContainText('0xA91F...E82C')
+  await expect(receiptDetails).toContainText('MetaMask')
+  await expect(receiptDetails).not.toContainText('Tipo:')
+  const transactionIdCell = receiptDetails.locator('div').first()
+  await expect(transactionIdCell).toHaveCSS('text-align', 'center')
+  await expect(transactionIdCell.getByText('ID da transação')).toHaveCSS('text-align', 'center')
+  await expect(receiptDetails.getByText('0xA91F...E82C')).toHaveCSS('font-size', '15px')
+  await expect(receiptDetails.getByText('0xA91F...E82C')).toHaveCSS('font-weight', '400')
+  await expect(receiptDetails.getByText('0xA91F...E82C')).toHaveCSS('line-height', '15px')
+  await expect(receiptDetails.getByText('0xA91F...E82C')).toHaveCSS('text-align', 'center')
+  await expect(receiptDetails.getByText('26.846 ETH')).toHaveCSS('font-size', '15px')
+  await expect(receiptDetails.getByText('MetaMask')).toHaveCSS('font-size', '15px')
+  const confirmation = page.locator('section[aria-labelledby="purchase-confirmation-title"]')
+  await expect(confirmation).toHaveCSS('border-width', '0px')
+  await expect(page.getByText(/Prévia demonstrativa na rede Ethereum/)).toBeVisible()
+  const confirmationIcon = page.locator('section[aria-labelledby="purchase-confirmation-title"] svg[viewBox="0 0 66 80"]')
+  await expect(confirmationIcon).toHaveAttribute('viewBox', '0 0 66 80')
+  await expect(confirmationIcon).toHaveAttribute('width', '66')
+  await expect(confirmationIcon).toHaveAttribute('height', '80')
+  const confirmationNfts = page.getByLabel('NFTs do pedido')
+  await expect(confirmationNfts.getByRole('listitem')).toHaveCount(3)
+  const confirmedEmerald = confirmationNfts.getByRole('listitem').filter({ hasText: 'Emerald Ape #042' })
+  await expect(confirmedEmerald.getByRole('heading', { name: 'Emerald Ape #042' })).toHaveCSS('font-size', '16px')
+  await expect(confirmedEmerald.getByText('ID do token: #0042')).toHaveCSS('font-size', '14px')
+  await expect(confirmedEmerald.getByText('(x 2)')).toHaveCSS('font-size', '15px')
+  await expect(confirmedEmerald.getByText('(x 2)')).toHaveCSS('width', '68px')
+  await expect(confirmedEmerald.getByText('2.38 ETH')).toHaveCSS('font-size', '16px')
+  await expect(confirmedEmerald.getByText('2.38 ETH')).toHaveCSS('width', '77px')
+  await expect(confirmedEmerald.getByText('2.38 ETH')).toHaveCSS('line-height', '16px')
+  await expect(page.getByText('Edições', { exact: true })).toHaveCSS('width', '68px')
+  await expect(page.getByText('Edições', { exact: true })).toHaveCSS('font-size', '16px')
+  await expect(page.getByText('Edições', { exact: true })).toHaveCSS('font-weight', '700')
+  await expect(page.getByText('Edições', { exact: true })).toHaveCSS('line-height', '16px')
+  await expect(page.getByText('Subtotal', { exact: true })).toHaveCSS('width', '77px')
+  await expect(confirmation.getByText('Taxa de rede')).toHaveCSS('font-size', '15px')
+  await expect(confirmation.getByText('Total', { exact: true }).last()).toHaveCSS('font-size', '16px')
+  await expect(confirmation.locator('dl').last().getByText('26.846 ETH')).toHaveCSS('color', 'rgb(210, 138, 76)')
+  await expect(confirmation.getByText(/Prévia demonstrativa/)).toHaveCSS('font-size', '14px')
+  await expect(confirmation.getByText(/Prévia demonstrativa/)).toHaveCSS('line-height', '22px')
+  await expect(page.getByText(/Nenhuma transação real foi enviada/)).toHaveCSS('font-size', '14px')
+  await expect(page.getByText(/Nenhuma transação real foi enviada/)).toHaveCSS('line-height', '22px')
+  const etherscanButton = page.getByRole('button', { name: 'Ver no Etherscan' })
+  await expect(etherscanButton).toBeDisabled()
+  await expect(etherscanButton).toHaveCSS('width', '154px')
+  await expect(etherscanButton).toHaveCSS('font-size', '16px')
+  await expect(etherscanButton).toHaveCSS('font-weight', '700')
+  await expect(page.getByRole('link', { name: 'Fechar confirmação' })).toBeVisible()
+  await expect(page.getByRole('contentinfo')).toBeVisible()
   await page.goBack()
   await expect(page).toHaveURL(/\/cart$/)
 

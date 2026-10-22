@@ -34,7 +34,7 @@ function PasswordField({
     <label className="relative block">
       <input
         autoComplete={autoComplete}
-        className="h-10 w-full rounded-[5px] border border-border bg-transparent px-3 pr-10 font-mono text-sm leading-4 text-foreground outline-none placeholder:text-secondary focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary"
+        className="h-10 w-full rounded-[5px] border border-border bg-transparent px-3 pr-10 font-mono text-sm leading-4 text-foreground outline-none placeholder:text-secondary focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary max-[700px]:h-[50px] max-[700px]:rounded-[10px]"
         placeholder={placeholder}
         required
         type={visible ? 'text' : 'password'}
@@ -54,13 +54,13 @@ function PasswordField({
 
 function SocialSignIn() {
   return (
-    <section aria-label="Outras formas de entrar" className="mt-6 max-[700px]:mt-3">
-      <div className="flex h-4 items-center gap-2 font-mono text-[13px] leading-4 text-foreground">
+    <section aria-label="Outras formas de entrar" className="mt-6 max-[700px]:mt-10 max-[700px]:w-full">
+      <div className="flex h-4 items-center gap-2 font-mono text-[13px] leading-4 text-foreground max-[700px]:gap-1">
         <span aria-hidden="true" className="h-px flex-1 bg-border" />
         <span className="shrink-0 px-1">Ou continue com</span>
         <span aria-hidden="true" className="h-px flex-1 bg-border" />
       </div>
-      <div className="mt-3 flex flex-col gap-3">
+      <div className="mt-3 flex flex-col gap-3 max-[700px]:mt-3 max-[700px]:gap-3">
         <button
           className="flex h-10 w-full items-center justify-center gap-3 rounded-[5px] border border-border font-mono text-[13px] font-medium leading-4 text-text-secondary transition-colors hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           type="button"
@@ -84,6 +84,7 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [mode, setMode] = useState<AuthMode>('login')
   const [passwordVisible, setPasswordVisible] = useState(false)
+  const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false)
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -98,7 +99,7 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
       aria-labelledby="auth-modal-title"
       className="fixed inset-0 m-auto h-[min(656px,calc(100dvh-16px))] w-[min(500px,calc(100vw-32px))] 
       max-w-none rounded-lg border border-border bg-card p-0
-       overflow-y-auto text-foreground shadow-2xl backdrop:bg-black/70"
+       overflow-y-auto text-foreground shadow-2xl backdrop:bg-black/70 max-[700px]:h-[min(896px,100dvh)] max-[700px]:w-[min(414px,100vw)] max-[700px]:rounded-[40px] max-[700px]:border-0 max-[700px]:bg-[#140D0A]"
       onCancel={(event) => {
         event.preventDefault()
         onClose()
@@ -108,10 +109,10 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
       }}
       ref={dialogRef}
     >
-      <div className="relative flex min-h-full flex-col px-6 pt-13 max-[700px]:pt-8 sm:px-10 md:px-20">
+      <div className="relative flex min-h-full flex-col px-6 pt-13 sm:px-10 md:px-20 max-[700px]:px-7 max-[700px]:pt-20 max-[700px]:pb-6">
         <button
           aria-label="Fechar"
-          className="absolute top-5 right-5 flex size-5 items-center justify-center rounded-sm text-primary transition-opacity hover:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="absolute top-5 right-5 flex size-5 items-center justify-center rounded-sm text-primary transition-opacity hover:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary max-[700px]:hidden"
           onClick={onClose}
           type="button"
         >
@@ -120,7 +121,7 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
           </svg>
         </button>
 
-        <div className="flex h-4 items-center justify-center font-mono text-[20px] font-medium leading-4" id="auth-modal-title">
+        <div className="hidden h-4 items-center justify-center font-mono text-[20px] font-medium leading-4 min-[701px]:flex" id="auth-modal-title">
           <button
             aria-pressed={mode === 'login'}
             className={mode === 'login' ? 'text-primary' : 'text-foreground transition-colors hover:text-primary'}
@@ -140,23 +141,32 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <p className="mt-11.5 text-center font-mono text-[13px] leading-4 text-foreground max-[700px]:mt-7">
+        <div aria-hidden="true" className="hidden h-[42px] w-[109px] items-center justify-center self-center font-mono text-[32px] font-bold leading-[32px] tracking-[0.1em] text-foreground max-[700px]:flex">
+          KURIO
+        </div>
+
+        <p className="mt-11.5 text-center font-mono text-[13px] leading-4 text-foreground max-[700px]:hidden">
           {mode === 'signup'
             ? <>Crie seu perfil de colecionador e conecte uma<br className="hidden sm:block" /> carteira quando quiser.</>
             : <>Entre para gerenciar sua carteira, coleção e perfil de criador.</>}
         </p>
 
+        <h1 className={`hidden text-center font-mono font-bold leading-4 text-foreground max-[700px]:block ${mode === 'signup' ? 'mt-[59px] text-base' : 'mt-[46px] text-xl'}`}>
+          {mode === 'signup' ? 'Criar perfil de colecionador' : 'Entrar'}
+        </h1>
+
         {mode === 'signup' ? (
-          <form className="mt-5 flex flex-col gap-3 max-[700px]:mt-3 max-[700px]:gap-2" onSubmit={(event) => event.preventDefault()}>
+          <>
+          <form className="mt-5 flex flex-col gap-3 max-[700px]:mt-5 max-[700px]:w-full max-[700px]:gap-3" onSubmit={(event) => event.preventDefault()}>
             <input
               autoComplete="username"
-              className="h-10 w-full rounded-[5px] border border-border bg-transparent px-3 font-mono text-sm leading-4 text-foreground outline-none placeholder:text-secondary focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary"
+              className="h-10 w-full rounded-[5px] border border-border bg-transparent px-3 font-mono text-sm leading-4 text-foreground outline-none placeholder:text-secondary focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary max-[700px]:h-[50px] max-[700px]:rounded-[10px]"
               placeholder="Nome de usuário"
               required
             />
             <input
               autoComplete="email"
-              className="h-10 w-full rounded-[5px] border border-border bg-transparent px-3 font-mono text-sm leading-4 text-foreground outline-none placeholder:text-secondary focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary"
+              className="h-10 w-full rounded-[5px] border border-border bg-transparent px-3 font-mono text-sm leading-4 text-foreground outline-none placeholder:text-secondary focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary max-[700px]:h-[50px] max-[700px]:rounded-[10px]"
               placeholder="Digite seu e-mail"
               required
               type="email"
@@ -167,25 +177,26 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
               placeholder="Senha"
               visible={passwordVisible}
             />
-            <input
+            <PasswordField
               autoComplete="new-password"
-              className="h-10 w-full rounded-[5px] border border-border bg-transparent px-3 font-mono text-sm leading-4 text-foreground outline-none placeholder:text-secondary focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary"
+              onToggle={() => setConfirmPasswordVisible((visible) => !visible)}
               placeholder="Confirmar senha"
-              required
-              type={passwordVisible ? 'text' : 'password'}
+              visible={confirmPasswordVisible}
             />
             <button
-              className="mt-2 h-11.25 w-full rounded-[5px] bg-primary font-mono text-base font-bold leading-4 text-primary-foreground transition-colors hover:bg-primary-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card max-[700px]:mt-1"
+              className="mt-2 h-11.25 w-full rounded-[5px] bg-primary font-mono text-base font-bold leading-4 text-primary-foreground transition-colors hover:bg-primary-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card max-[700px]:mt-2 max-[700px]:h-[60px] max-[700px]:rounded-[10px]"
               type="submit"
             >
-              Criar conta
+              <span className="max-[700px]:hidden">Criar conta</span>
+              <span className="hidden max-[700px]:inline">Criar perfil</span>
             </button>
           </form>
+          </>
         ) : (
-          <form className="mt-5 flex flex-col gap-3 max-[700px]:mt-3 max-[700px]:gap-2" onSubmit={(event) => event.preventDefault()}>
+          <form className="mt-5 flex flex-col gap-3 max-[700px]:mt-6 max-[700px]:w-full max-[700px]:gap-3" onSubmit={(event) => event.preventDefault()}>
             <input
               autoComplete="email"
-              className="h-10 w-full rounded-[5px] border border-border bg-transparent px-3 font-mono text-sm leading-4 text-foreground outline-none placeholder:text-secondary focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary"
+              className="h-10 w-full rounded-[5px] border border-border bg-transparent px-3 font-mono text-sm leading-4 text-foreground outline-none placeholder:text-secondary focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary max-[700px]:h-[50px] max-[700px]:rounded-[10px]"
               placeholder="contato@email.com"
               required
               type="email"
@@ -196,16 +207,16 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
               placeholder="Senha"
               visible={passwordVisible}
             />
-            <div className="flex justify-end pt-1">
+              <div className="flex justify-end pt-1">
               <button
-                className="font-mono text-xs leading-4 text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="font-mono text-xs leading-4 text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary max-[700px]:text-sm"
                 type="button"
               >
                 Esqueceu a senha?
               </button>
             </div>
             <button
-              className="mt-2 h-11.25 w-full rounded-[5px] bg-primary font-mono text-base font-bold leading-4 text-primary-foreground transition-colors hover:bg-primary-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card max-[700px]:mt-1"
+              className="mt-2 h-11.25 w-full rounded-[5px] bg-primary font-mono text-base font-bold leading-4 text-primary-foreground transition-colors hover:bg-primary-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card max-[700px]:mt-2 max-[700px]:h-[60px] max-[700px]:rounded-[10px]"
               type="submit"
             >
               Entrar
@@ -214,7 +225,10 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
         )}
 
         <SocialSignIn />
-        <div aria-hidden="true" className="-mx-6 mt-auto h-2.5 shrink-0 bg-primary sm:-mx-10 md:-mx-20" />
+        <button className="mt-10 hidden text-center font-mono text-[15px] leading-5 text-secondary max-[700px]:block" onClick={() => setMode((current) => current === 'login' ? 'signup' : 'login')} type="button">
+          {mode === 'login' ? <>Novo na Kurio? <span className="text-primary">Crie uma conta</span></> : <>Já tem uma conta? <span className="text-primary">Entre</span></>}
+        </button>
+        <div aria-hidden="true" className="-mx-6 mt-auto h-2.5 shrink-0 bg-primary sm:-mx-10 md:-mx-20 max-[700px]:hidden" />
       </div>
     </dialog>
   )

@@ -28,6 +28,7 @@ type HomeFiltersProps = {
   onNetworkChange: (network: string | null) => void
   priceRange: [number, number]
   onPriceRangeApply: (range: [number, number]) => void
+  className?: string
 }
 
 export function HomeFilters({
@@ -37,6 +38,7 @@ export function HomeFilters({
   onNetworkChange,
   priceRange,
   onPriceRangeApply,
+  className = '',
 }: HomeFiltersProps) {
   const [minPrice, setMinPrice] = useState(priceRange[0])
   const [maxPrice, setMaxPrice] = useState(priceRange[1])
@@ -49,15 +51,15 @@ export function HomeFilters({
     (value / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
   return (
-    <aside aria-label="Filtros do mercado" className="flex w-77.5 flex-col gap-3 bg-surface-card p-5">
-      <section aria-labelledby="collection-filter-title" className="h-97 w-67.5">
+    <aside aria-label="Filtros do mercado" className={`flex w-77.5 flex-col gap-3 bg-surface-card p-5  rounded-2xl ${className}`}>
+      <section aria-labelledby="collection-filter-title" className="h-97 sm:w-67.5">
         <h2
           className="h-5.5 font-mono text-lg font-bold leading-5.5 text-foreground"
           id="collection-filter-title"
         >
           Coleções
         </h2>
-        <ul className="mt-1.5 ml-1 w-61.5">
+        <ul className="mt-1.5 ml-1 w-56 sm:w-61.5">
           {collections.map(({ label, count }) => (
             <li className="h-10 w-full" key={label}>
               <button
@@ -86,7 +88,7 @@ export function HomeFilters({
           </h2>
         </div>
 
-        <div className="ml-3 w-64.5">
+        <div className="ml-3 w-55.5 sm:w-64.5">
           <div className="relative mt-1.5 h-3.75 w-full" aria-label="Faixa de preço em ETH">
             <div aria-hidden="true" className="absolute inset-x-0 top-1.5 h-1 rounded-full bg-primary" />
             <input

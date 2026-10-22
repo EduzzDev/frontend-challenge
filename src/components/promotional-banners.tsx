@@ -15,15 +15,7 @@ const banners = [
   },
   {
     title: 'Arte digital selecionada e muito mais',
-    description: (
-      <>
-        Explore novos artistas,
-        <br />
-        coleções verificadas e obras
-        <br />
-        digitais que definem a cultura.
-      </>
-    ),
+    description: 'Explore novos artistas, coleções verificadas e obras digitais que definem a cultura.',
     image: '/images/dapper-kong.png',
     imageAlt: 'Macaco usando terno claro',
     imageWidth: 287,
@@ -39,20 +31,20 @@ export function PromotionalBanners() {
   return (
     <section
       aria-label="Destaques do marketplace"
-      className="mx-auto mt-12 grid w-full max-w-300 gap-7 px-4 md:grid-cols-2 md:px-0"
+      className="mx-auto mt-12 grid w-full max-w-300 gap-6 px-4 md:grid-cols-2 md:gap-7 md:px-0"
     >
       {banners.map((banner) => (
         <article
-          className="flex h-62.5  min-w-0 flex-col bg-surface-card sm:flex-row"
+          className="flex min-w-0 flex-col overflow-hidden rounded-xl bg-surface-card sm:h-62.5 sm:flex-row sm:rounded-none"
           key={banner.title}
         >
-          <div className="relative h-62.5 w-full shrink-0 sm:w-73.25">
+          <div className="relative h-44 w-full shrink-0 sm:h-62.5 sm:w-73.25">
             <img
               alt={banner.imageAlt}
-              className={`h-full w-full object-cover sm:absolute sm:top-0 ${
+              className={`h-full w-full object-cover ${
                 banner.imageLeft === -5
-                  ? 'rounded-[18px] sm:-left-1.25 sm:w-73'
-                  : 'rounded-[17px] sm:left-0.5 sm:w-71.75'
+                  ? 'rounded-t-xl sm:absolute sm:top-0 sm:-left-1.25 sm:w-73 sm:rounded-[18px]'
+                  : 'rounded-t-xl sm:absolute sm:top-0 sm:left-0.5 sm:w-71.75 sm:rounded-[17px]'
               }`}
               height={250}
               loading="lazy"
@@ -62,7 +54,7 @@ export function PromotionalBanners() {
             {banner.hasCornerCircle && (
               <div
                 aria-hidden="true"
-                className={`pointer-events-none absolute top-0 h-full overflow-hidden ${
+                className={`pointer-events-none absolute top-0 hidden h-full overflow-hidden sm:block ${
                   banner.imageLeft === 2
                     ? 'left-0.5 w-68 rounded-[17px]'
                     : 'inset-0 w-full -translate-x-1'
@@ -91,20 +83,17 @@ export function PromotionalBanners() {
               </div>
             )}
           </div>
-          <div className="flex min-w-0 flex-1 flex-col items-end
-           justify-start pt-9.25 pr-7.5 text-right">
-            <h2 className="h-12 w-65 font-mono text-lg font-bold leading-6 text-foreground">
+          <div className="flex min-w-0 flex-1 flex-col items-center px-4 py-5 text-center sm:items-end sm:justify-start sm:px-7.5 sm:pt-9.25 sm:pb-0 sm:text-right">
+            <h2 className="w-full font-mono text-base font-bold leading-6 text-foreground sm:h-12 sm:w-65 sm:text-lg">
               {banner.title}
             </h2>
             <p
-              className={`mt-2.25 h-11.25 ${banner.descriptionWidth} 
-              ${banner.descriptionOffsetRight} overflow-visible font-mono text-sm font-normal
-               leading-6 text-secondary`}
+              className={`mt-2 w-full max-w-[300px] font-mono text-xs font-normal leading-5 text-secondary sm:mt-2.25 sm:h-11.25 sm:w-auto sm:max-w-none ${banner.descriptionWidth} ${banner.descriptionOffsetRight} sm:text-sm sm:leading-6`}
             >
               {banner.description}
             </p>
             <a
-              className="mt-6.25 inline-flex h-10 items-center gap-2 rounded-md bg-primary px-4 font-mono text-sm font-bold text-primary-foreground transition-colors hover:bg-primary-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface-card"
+              className="mt-4 inline-flex h-10 items-center gap-2 rounded-md bg-primary px-4 font-mono text-sm font-bold text-primary-foreground transition-colors hover:bg-primary-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface-card sm:mt-6.25"
               href="#mercado"
             >
               Explorar

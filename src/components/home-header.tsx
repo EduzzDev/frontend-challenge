@@ -35,9 +35,21 @@ function CartIcon() {
 export function HomeHeader({
   activeHref = '#inicio',
   navigationPrefix = '',
+  mobileHomeLayout = false,
+  mobileBrand = true,
+  mobileNavigation = true,
+  searchQuery = '',
+  onSearchChange,
+  onMobileFiltersClick,
 }: {
   activeHref?: string
   navigationPrefix?: string
+  mobileHomeLayout?: boolean
+  mobileBrand?: boolean
+  mobileNavigation?: boolean
+  searchQuery?: string
+  onSearchChange?: (query: string) => void
+  onMobileFiltersClick?: () => void
 }) {
   const [isAuthOpen, setIsAuthOpen] = useState(false)
   const [selectedHref, setSelectedHref] = useState(() => getSelectedNavigationHref(activeHref))
@@ -58,11 +70,51 @@ export function HomeHeader({
   }
 
   return (
-    <header className="relative mx-auto flex h-17.25 w-full max-w-300 items-center justify-between px-4 md:px-0">
+    <>
+    {mobileHomeLayout && (
+      <header className="mx-auto mt-5 flex h-[45px] w-[calc(100%-48px)] max-w-[366px] items-center gap-2 md:hidden">
+        <label className="flex h-full min-w-0 flex-1 items-center gap-2 rounded-lg bg-surface-card px-3">
+          <span className="scale-75 text-text-secondary"><SearchIcon /></span>
+          <input
+            aria-label="Explorar coleções"
+            className="min-w-0 flex-1 bg-transparent font-mono text-[10px] leading-4 text-foreground outline-none placeholder:text-text-secondary"
+            onChange={(event) => onSearchChange?.(event.target.value)}
+            placeholder="Explorar coleções"
+            value={searchQuery}
+            type="search"
+          />
+        </label>
+        <button
+          aria-label="Filtros"
+          className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground"
+          onClick={onMobileFiltersClick}
+          type="button"
+        >
+          <svg aria-hidden="true" fill="none" height="14" viewBox="0 0 16 16" width="14">
+            <path d="M2 4h12M4 8h8m-6 4h4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
+            <circle cx="5" cy="4" r="1.25" fill="currentColor" />
+            <circle cx="10" cy="8" r="1.25" fill="currentColor" />
+            <circle cx="7" cy="12" r="1.25" fill="currentColor" />
+          </svg>
+        </button>
+      </header>
+    )}
+    {!mobileHomeLayout && mobileBrand && (
+      <header className="mx-auto flex h-14 w-full items-center px-4 md:hidden">
+        <a
+          aria-label="Kurio - início"
+          className="font-mono text-sm font-bold tracking-[0.12em] text-foreground"
+          href={`${navigationPrefix}#inicio`}
+        >
+          KURIO
+        </a>
+      </header>
+    )}
+    <header className="relative mx-auto hidden h-17.25 w-full max-w-300 items-center justify-between px-4 md:flex md:px-0">
       <div aria-hidden="true" className="absolute inset-x-0 bottom-1 h-0 border-t-[0.3px] border-border" />
       <a
         aria-label="Kurio - início"
-        className="flex h-[34.3px] w-40 shrink-0 items-center font-mono text-sm 
+        className="flex h-[34.3px] w-40 shrink-0 items-center pl-14 font-mono text-sm 
         font-bold tracking-[0.12em] text-foreground max-md:flex-1"
         href={`${navigationPrefix}#inicio`}
       >
@@ -88,7 +140,7 @@ export function HomeHeader({
         ))}
       </nav>
 
-      <div className="flex h-8.75 w-51.75 shrink-0 items-center justify-between max-md:gap-2">
+      <div className="flex h-8.75 w-51.75 shrink-0 -translate-x-16 items-center justify-between max-md:gap-2 max-lg:w-auto max-lg:gap-4">
         <button
           aria-label="Buscar"
           className="flex size-5 shrink-0 items-center justify-center rounded-sm text-foreground transition-opacity hover:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -105,7 +157,7 @@ export function HomeHeader({
         </a>
         <button
           aria-label="Entrar"
-          className="h-8.75 w-25 shrink-0 rounded-md transition-opacity hover:opacity-90 
+          className="h-8.75 w-25 shrink-0 rounded-md transition-opacity hover:opacity-90 max-lg:w-[76px]
           focus-visible:outline-none focus-visible:ring-2
            focus-visible:ring-ring focus-visible:ring-offset-2
             focus-visible:ring-offset-background"
@@ -113,7 +165,7 @@ export function HomeHeader({
           ref={authTriggerRef}
           type="button"
         >
-          <svg aria-hidden="true" width="100" height="35" viewBox="0 0 100 35" fill="none">
+          <svg aria-hidden="true" className="max-lg:w-[76px]" width="100" height="35" viewBox="0 0 100 35" fill="none">
             <rect width="100" height="35" rx="6" fill="#D28A4C" />
             <path d="M27.1592 17.1006H17.125" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" stroke="#140D0A" />
             <path d="M24.7202 14.6706L27.1602 17.1006L24.7202 19.5306" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" stroke="#140D0A" />
@@ -122,7 +174,41 @@ export function HomeHeader({
           </svg>
         </button>
       </div>
-      {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
     </header>
+    {mobileNavigation && <nav
+      aria-label="Menu mobile"
+      className="fixed inset-x-0 bottom-0 z-40 flex h-[64px] items-center justify-around rounded-t-2xl border-t border-border bg-surface-card px-5 pb-[env(safe-area-inset-bottom)] md:hidden"
+    >
+      <a aria-label="Início" className="flex size-10 items-center justify-center" href={`${navigationPrefix}#inicio`}>
+        <img alt="" className="size-4" height="16" src="/images/home.png" width="16" />
+      </a>
+      <a aria-label="Favoritos" className="flex size-10 items-center justify-center" href={`${navigationPrefix}#mercado`}>
+        <img alt="" className="size-4" height="16" src="/images/favorite-heart.png" width="16" />
+      </a>
+      <a
+        aria-label="Explorar mercado"
+        className="relative -mt-7 flex size-12 items-center justify-center rounded-full border border-primary bg-primary text-primary-foreground shadow-lg"
+        href={`${navigationPrefix}#mercado`}
+      >
+        <svg aria-hidden="true" fill="none" height="20" viewBox="0 0 20 20" width="20">
+          <path d="M10 3v14M3 10h14" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
+          <circle cx="10" cy="10" r="8.5" stroke="currentColor" strokeWidth="1.2" />
+        </svg>
+      </a>
+      <a aria-label="Carrinho" className="flex size-10 items-center justify-center" href="/cart">
+        <img alt="" className="size-4" height="16" src="/images/carrinho.png" width="16" />
+      </a>
+      <button
+        aria-label="Entrar"
+        className="flex size-10 items-center justify-center"
+        onClick={() => setIsAuthOpen(true)}
+        ref={authTriggerRef}
+        type="button"
+      >
+        <img alt="" className="size-4" height="16" src="/images/user.png" width="16" />
+      </button>
+    </nav>}
+    {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
+    </>
   )
 }
