@@ -53,7 +53,7 @@ export function NftMarketplaceGrid({
   return (
     <section
       aria-label="NFTs disponíveis"
-      className="flex min-h-312.5 w-210.5 max-w-full flex-col gap-8 max-md:min-h-0 max-md:w-full max-md:gap-3"
+      className="flex min-h-312.5 w-210.5 max-w-full min-w-0 flex-col gap-8 max-md:min-h-0 max-md:w-full max-md:gap-3"
       id="mercado"
     >
       <div className="flex min-h-12 flex-wrap items-center justify-between gap-4 border-b border-border max-md:min-h-4 max-md:flex-nowrap max-md:gap-0 max-md:border-0">

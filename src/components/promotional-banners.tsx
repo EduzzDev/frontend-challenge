@@ -31,7 +31,7 @@ export function PromotionalBanners() {
   return (
     <section
       aria-label="Destaques do marketplace"
-      className="mx-auto mt-12 grid w-full max-w-300 gap-6 px-4 md:grid-cols-2 md:gap-7 md:px-0"
+      className="mx-auto mt-12 grid w-full max-w-300 gap-6 px-4 xl:grid-cols-2 xl:gap-7 xl:px-0"
     >
       {banners.map((banner) => (
         <article

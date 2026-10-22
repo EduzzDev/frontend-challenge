@@ -26,7 +26,7 @@ export function HomePage() {
         />
         <HomeHero />
         <div className="mx-auto mt-4 w-full max-w-300 px-6 md:mt-24 md:px-0">
-          <div className="flex w-full flex-col gap-0 xl:flex-row xl:gap-8">
+          <div className="flex w-full flex-col gap-0 md:flex-row md:items-start md:gap-8">
             <div className="flex w-77.5 shrink-0 flex-col gap-5 max-md:hidden">
               <HomeFilters
                 onCollectionChange={setSelectedCollection}
